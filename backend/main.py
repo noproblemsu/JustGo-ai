@@ -1,6 +1,6 @@
 import streamlit as st
 import time
-from gpt_engine import generate_schedule_gpt
+from gpt_client import generate_schedule_gpt
 
 # ✅ UI 구성
 st.title("🌏 ChatTrip: AI 여행 플래너")
