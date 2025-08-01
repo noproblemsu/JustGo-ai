@@ -1,6 +1,6 @@
 import streamlit as st
 import time
-from prompts import generate_schedule_gpt
+from gpt_client import generate_schedule_gpt  # ✅ 올바른 위치
 
 # ✅ UI 구성
 st.title("🌏 ChatTrip: AI 여행 플래너")
@@ -53,7 +53,7 @@ if st.session_state.schedule_result:
         st.chat_message("user").write(user_msg)
         st.session_state.chat_history.append({"role": "user", "content": user_msg})
 
-        from gpt_engine import client
+        from gpt_client import client
         try:
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
