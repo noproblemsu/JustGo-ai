@@ -1,6 +1,7 @@
 import streamlit as st
 import time
-from gpt_client import generate_schedule_gpt  # ✅ 올바른 위치
+from datetime import date, timedelta
+from gpt_client import generate_schedule_gpt  # ✅ GPT 호출 함수
 
 # ✅ UI 구성
 st.title("🌏 ChatTrip: AI 여행 플래너")
@@ -11,7 +12,19 @@ destination = st.selectbox("어디로 여행 가시나요?",
 if destination == "직접 입력":
     destination = st.text_input("여행지를 직접 입력해주세요")
 
-days = st.slider("여행 기간(일 수)", 1, 10, 3)
+# ✅ 날짜 입력 방식으로 변경 (슬라이더 → 시작일/종료일)
+col1, col2 = st.columns(2)
+with col1:
+    start_date = st.date_input("여행 시작일", value=date.today())
+with col2:
+    end_date = st.date_input("여행 종료일", value=date.today() + timedelta(days=2))
+
+# ✅ 자동 계산된 여행 일수
+days = (end_date - start_date).days + 1
+if days < 1:
+    st.error("🚨 종료일은 시작일보다 같거나 이후여야 해요.")
+    st.stop()
+
 budget = st.number_input("여행 예산 (원)", min_value=10000, step=10000, value=300000)
 travel_type = st.selectbox("여행 스타일을 선택하세요", ["휴식 중심", "액티비티 중심", "맛집 탐방", "역사 탐방"])
 
@@ -32,10 +45,18 @@ if st.button("일정 추천 받기"):
     if with_friends: companions.append("친구")
     if with_family: companions.append("가족")
 
-    st.success(f"{destination}에서 {days}일 동안 '{travel_type}' 여행 일정을 준비 중이에요!")
+    st.success(f"{destination}에서 {start_date}부터 {end_date}까지 '{travel_type}' 여행 일정을 준비 중이에요!")
 
     with st.spinner("AI가 여행 일정을 생성 중입니다..."):
-        result = generate_schedule_gpt(destination, days, travel_type, companions, budget, selected_places)
+        result = generate_schedule_gpt(
+            location=destination,
+            days=days,
+            style=travel_type,
+            companions=companions,
+            budget=budget,
+            selected_places=selected_places,
+            travel_date=str(start_date)  # 시작일 기준으로 전달
+        )
         st.session_state.schedule_result = result
         st.session_state.chat_history = [
             {"role": "system", "content": "너는 여행 일정 전문가야. 아래 일정에 대해 사용자의 수정 요청에 응답해줘."},
