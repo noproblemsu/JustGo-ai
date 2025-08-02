@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from gpt_client import generate_schedule_gpt  # ✅ GPT 호출 함수
 
 # ✅ UI 구성
-st.title("🌏 ChatTrip: AI 여행 플래너")
+st.title("🌏 JustGo 여행플래너")
 
 destination = st.selectbox("어디로 여행 가시나요?", 
     ["강릉", "경주", "광주", "대구", "대전", "부산", "서울", "속초", "여수", "울산", "인천", "전주", "제주도", "직접 입력"])
