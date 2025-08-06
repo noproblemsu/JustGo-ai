@@ -2,6 +2,7 @@ import streamlit as st
 import time
 from datetime import date, timedelta
 from gpt_client import generate_schedule_gpt
+import re
 
 # ✅ 외부 스타일 적용 (frontend/style.css)
 with open("../frontend/style.css", "r", encoding="utf-8") as f:
@@ -44,7 +45,7 @@ with st.expander("추가 옵션"):
 
 # ✅ 세션 상태 초기화
 if "schedule_result" not in st.session_state:
-    st.session_state.schedule_result = ""
+    st.session_state.schedule_result = []
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
@@ -67,38 +68,48 @@ if st.button("일정 추천 받기"):
             travel_date=str(start_date),
             count=3
         )
-        # ✅ 중복 제거 로직 적용
-        seen_titles = set()
-        unique_blocks = []
-        for block in result.split("일정추천"):
-            block = block.strip()
-            if not block:
-                continue
-            title_line = block.split("\n", 1)[0].strip()
-            if title_line not in seen_titles:
-                seen_titles.add(title_line)
-                unique_blocks.append("일정추천 " + block)
 
-        st.session_state.schedule_result = unique_blocks
+        # ✅ 일정 추천 파싱 및 중복 제거
+        raw_blocks = result.strip().split("일정추천 ")
+        unique_titles = set()
+        cleaned_schedules = []
+
+        for block in raw_blocks:
+            if not block.strip():
+                continue
+            title_match = re.match(r"(\d+): (.+)", block.strip())
+            if not title_match:
+                continue
+
+            num, title = title_match.groups()
+            full_title = f"일정추천 {num}: {title.strip()}"
+
+            if full_title in unique_titles:
+                continue
+            unique_titles.add(full_title)
+
+            content_lines = block.strip().split("\n")[1:]
+            detail = "\n".join(content_lines).strip()
+            cleaned_schedules.append((full_title, detail))
+
+        st.session_state.schedule_result = cleaned_schedules
+        full_result_for_gpt = "\n\n".join([f"{title}\n{detail}" for title, detail in cleaned_schedules])
+
         st.session_state.chat_history = [
             {"role": "system", "content": "너는 여행 일정 전문가야. 아래 일정에 대해 사용자의 수정 요청에 응답해줘."},
-            {"role": "user", "content": f"기존 일정:\n{''.join(unique_blocks)}"}
+            {"role": "user", "content": f"기존 일정:\n{full_result_for_gpt}"}
         ]
         time.sleep(1)
 
 # ✅ 일정 출력 (카드 토글 방식 적용)
 if st.session_state.schedule_result:
-    st.subheader("📅 추천 일정")
+    st.subheader("\U0001F4C5 추천 일정")
 
-    for block in st.session_state.schedule_result:
-        lines = block.strip().split("\n")
-        title = lines[0].strip()
-        details = "\n".join(lines[1:])
-
+    for title, detail in st.session_state.schedule_result:
         with st.expander(title):
-            st.markdown(details)
+            st.markdown(f'<div class="chat-bubble-assistant">{detail}</div>', unsafe_allow_html=True)
 
-    st.subheader("✏️ 일정 수정 요청하기")
+    st.subheader("\u270F\ufe0f 일정 수정 요청하기")
 
     for chat in st.session_state.chat_history:
         role = chat["role"]
@@ -123,4 +134,4 @@ if st.session_state.schedule_result:
             st.markdown(f'<div class="chat-bubble-assistant">{ai_msg}</div>', unsafe_allow_html=True)
             st.session_state.chat_history.append({"role": "assistant", "content": ai_msg})
         except Exception as e:
-            st.error(f"⚠️ 에러 발생: {e}")
+            st.error(f"\u26a0\ufe0f 에러 발생: {e}")
