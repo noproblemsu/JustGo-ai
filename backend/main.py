@@ -67,25 +67,36 @@ if st.button("일정 추천 받기"):
             travel_date=str(start_date),
             count=3
         )
-        st.session_state.schedule_result = result
+        # ✅ 중복 제거 로직 적용
+        seen_titles = set()
+        unique_blocks = []
+        for block in result.split("일정추천"):
+            block = block.strip()
+            if not block:
+                continue
+            title_line = block.split("\n", 1)[0].strip()
+            if title_line not in seen_titles:
+                seen_titles.add(title_line)
+                unique_blocks.append("일정추천 " + block)
+
+        st.session_state.schedule_result = unique_blocks
         st.session_state.chat_history = [
             {"role": "system", "content": "너는 여행 일정 전문가야. 아래 일정에 대해 사용자의 수정 요청에 응답해줘."},
-            {"role": "user", "content": f"기존 일정:\n{result}"}
+            {"role": "user", "content": f"기존 일정:\n{''.join(unique_blocks)}"}
         ]
         time.sleep(1)
 
 # ✅ 일정 출력 (카드 토글 방식 적용)
 if st.session_state.schedule_result:
-    st.subheader("🗓️ 추천 일정")
+    st.subheader("📅 추천 일정")
 
-    schedules = st.session_state.schedule_result.split("---")
-    for idx, schedule in enumerate(schedules, start=1):
-        lines = schedule.strip().split("\n")
-        title = lines[0].replace("### ", "") if lines else f"일정추천 {idx}"
-        detail = "\n".join(lines[1:])
+    for block in st.session_state.schedule_result:
+        lines = block.strip().split("\n")
+        title = lines[0].strip()
+        details = "\n".join(lines[1:])
 
         with st.expander(title):
-            st.markdown(f'<div class="chat-bubble-assistant">{detail}</div>', unsafe_allow_html=True)
+            st.markdown(details)
 
     st.subheader("✏️ 일정 수정 요청하기")
 
