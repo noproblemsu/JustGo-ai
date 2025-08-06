@@ -12,14 +12,14 @@ destination = st.selectbox("어디로 여행 가시나요?",
 if destination == "직접 입력":
     destination = st.text_input("여행지를 직접 입력해주세요")
 
-# ✅ 날짜 입력 방식으로 변경 (슬라이더 → 시작일/종료일)
+# ✅ 날짜 입력
 col1, col2 = st.columns(2)
 with col1:
     start_date = st.date_input("여행 시작일", value=date.today())
 with col2:
     end_date = st.date_input("여행 종료일", value=date.today() + timedelta(days=2))
 
-# ✅ 자동 계산된 여행 일수
+# ✅ 여행일 수 계산
 days = (end_date - start_date).days + 1
 if days < 1:
     st.error("🚨 종료일은 시작일보다 같거나 이후여야 해요.")
@@ -31,15 +31,18 @@ travel_type = st.selectbox("여행 스타일을 선택하세요", ["휴식 중�
 with st.expander("추가 옵션"):
     with_friends = st.checkbox("친구랑 함께")
     with_family = st.checkbox("가족과 함께")
-    selected_places = st.text_area("방문하고 싶은 장소 (관광지나 맛집 등)", placeholder="예: 불국사, 황리단길, 경주월드 등").split(',')
+    selected_places = st.text_area(
+        "방문하고 싶은 장소 (관광지나 맛집 등)", 
+        placeholder="예: 불국사, 황리단길, 경주월드 등"
+    ).split(',')
 
-# 세션 초기화
+# ✅ 세션 상태 초기화
 if "schedule_result" not in st.session_state:
     st.session_state.schedule_result = ""
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# ✅ GPT 호출
+# ✅ GPT 일정 생성
 if st.button("일정 추천 받기"):
     companions = []
     if with_friends: companions.append("친구")
@@ -55,7 +58,7 @@ if st.button("일정 추천 받기"):
             companions=companions,
             budget=budget,
             selected_places=selected_places,
-            travel_date=str(start_date)  # 시작일 기준으로 전달
+            travel_date=str(start_date)
         )
         st.session_state.schedule_result = result
         st.session_state.chat_history = [
@@ -69,7 +72,7 @@ if st.button("일정 추천 받기"):
 if st.session_state.schedule_result:
     st.subheader("✏️ 일정 수정 요청하기")
 
-    # 🔁 이전 대화 전체 출력 (채팅처럼)
+    # 🔁 이전 채팅 히스토리 모두 출력
     for chat in st.session_state.chat_history:
         role = chat["role"]
         if role == "user":
@@ -93,3 +96,5 @@ if st.session_state.schedule_result:
             ai_msg = response.choices[0].message.content
             st.chat_message("assistant").write(ai_msg)
             st.session_state.chat_history.append({"role": "assistant", "content": ai_msg})
+        except Exception as e:
+            st.error(f"⚠️ 에러 발생: {e}")
