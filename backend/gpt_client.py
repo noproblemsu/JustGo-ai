@@ -1,3 +1,4 @@
+# ✅ gpt_client.py (전체 수정된 코드)
 from openai import OpenAI
 from prompts import build_prompt
 
