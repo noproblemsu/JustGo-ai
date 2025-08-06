@@ -1,10 +1,9 @@
-# ✅ gpt_client.py (전체 수정된 코드)
 from openai import OpenAI
 from prompts import build_prompt
 
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="너의_실제_API_키")  # 이미 설정되어 있음
 
-def generate_schedule_gpt(location, days, style, companions, budget, selected_places, travel_date):
+def generate_schedule_gpt(location, days, style, companions, budget, selected_places, travel_date, count=3):
     prompt = build_prompt(
         location=location,
         days=days,
@@ -12,7 +11,8 @@ def generate_schedule_gpt(location, days, style, companions, budget, selected_pl
         companions=companions,
         style=style,
         selected_places=selected_places,
-        travel_date=travel_date
+        travel_date=travel_date,
+        count=count  # ✅ count 추가
     )
 
     response = client.chat.completions.create(

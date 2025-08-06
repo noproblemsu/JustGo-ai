@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-def build_prompt(location, days, budget, companions, style, selected_places, travel_date):
+def build_prompt(location, days, budget, companions, style, selected_places, travel_date, count=3):
     companion_str = ', '.join(companions) if companions else "없음"
     selected_str = '\n'.join([f"- {place.strip()}" for place in selected_places if place.strip()]) or "없음"
 
@@ -38,6 +38,7 @@ def build_prompt(location, days, budget, companions, style, selected_places, tra
 5. 하루가 끝날 때마다 **간단한 마무리 문장**으로 정리해줘.
 6. 결과는 날짜별로 **마크다운 형식**으로 예쁘게 정리해줘.
 7. 마지막에는 전체 여행 일정에 대한 **총 예상 비용**을 계산해서 아래처럼 문장으로 알려줘:
-예시: `총 예상 비용은 약 267,000원으로, 입력 예산인 300,000원 내에서 잘 계획되었어요.`
-8. 사용자가 일정을 고를 수 있도록 **각기 다른 스타일의 여행 일정 3개**를 각각 마크다운 구분선 `---`으로 나누어 작성해줘.
+   예시: `총 예상 비용은 약 267,000원으로, 입력 예산인 300,000원 내에서 잘 계획되었어요.`
+8. 사용자가 선택할 수 있도록 **서로 다른 스타일 또는 구성의 여행 일정 {count}개**를 작성해줘.
+9. 각 일정은 반드시 마크다운 구분선 `---` 으로 나눠줘.
 """
