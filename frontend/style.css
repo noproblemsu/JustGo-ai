@@ -1,0 +1,21 @@
+.chat-bubble-user {
+    background-color: #0059ff;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 16px;
+    border-top-right-radius: 0;
+    max-width: 70%;
+    margin-left: auto;
+    margin-bottom: 8px;
+}
+
+.chat-bubble-assistant {
+    background-color: #eeeeee;
+    color: black;
+    padding: 10px 14px;
+    border-radius: 16px;
+    border-top-left-radius: 0;
+    max-width: 70%;
+    margin-right: auto;
+    margin-bottom: 8px;
+}
