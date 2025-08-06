@@ -1,28 +1,35 @@
 import streamlit as st
 import time
 from datetime import date, timedelta
-from gpt_client import generate_schedule_gpt
+import sys
+import io
 
-# ✅ 외부 스타일 적용
+# 🔧 stdout 한글 인코딩 오류 방지용 설정 (Windows용)
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+from gpt_client import generate_schedule_gpt  # GPT 호출 함수
+
+# ✅ 외부 스타일 적용 (frontend/style.css)
 with open("../frontend/style.css", "r", encoding="utf-8") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+# ✅ UI 구성
 st.title("🌏 JustGo 여행플래너")
 
-# ✅ 사용자 입력 받기
-destination = st.selectbox("어디로 여행 가시나요?", [
-    "강릉", "경주", "광주", "대구", "대전", "부산", "서울", "속초", "여수",
-    "울산", "인천", "전주", "제주도", "직접 입력"
-])
+destination = st.selectbox("어디로 여행 가시나요?", 
+    ["강릉", "경주", "광주", "대구", "대전", "부산", "서울", "속초", "여수", "울산", "인천", "전주", "제주도", "직접 입력"])
+
 if destination == "직접 입력":
     destination = st.text_input("여행지를 직접 입력해주세요")
 
+# ✅ 날짜 입력
 col1, col2 = st.columns(2)
 with col1:
     start_date = st.date_input("여행 시작일", value=date.today())
 with col2:
     end_date = st.date_input("여행 종료일", value=date.today() + timedelta(days=2))
 
+# ✅ 여행일 수 계산
 days = (end_date - start_date).days + 1
 if days < 1:
     st.error("🚨 종료일은 시작일보다 같거나 이후여야 해요.")
@@ -35,25 +42,25 @@ with st.expander("추가 옵션"):
     with_friends = st.checkbox("친구랑 함께")
     with_family = st.checkbox("가족과 함께")
     selected_places = st.text_area(
-        "방문하고 싶은 장소 (관광지나 맛집 등)",
+        "방문하고 싶은 장소 (관광지나 맛집 등)", 
         placeholder="예: 불국사, 황리단길, 경주월드 등"
     ).split(',')
 
-# ✅ 세션 상태
-if "schedules" not in st.session_state:
-    st.session_state.schedules = []
-if "selected_schedule" not in st.session_state:
-    st.session_state.selected_schedule = None
+# ✅ 세션 상태 초기화
+if "schedule_result" not in st.session_state:
+    st.session_state.schedule_result = []
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# ✅ 일정 추천 받기 버튼
+# ✅ GPT 일정 생성 버튼
 if st.button("일정 추천 받기"):
     companions = []
     if with_friends: companions.append("친구")
     if with_family: companions.append("가족")
 
-    with st.spinner("GPT가 3개의 서로 다른 여행 일정을 생성 중입니다..."):
+    st.success(f"{destination}에서 {start_date}부터 {end_date}까지 '{travel_type}' 여행 일정을 준비 중이에요!")
+
+    with st.spinner("AI가 여행 일정을 생성 중입니다..."):
         result = generate_schedule_gpt(
             location=destination,
             days=days,
@@ -62,50 +69,67 @@ if st.button("일정 추천 받기"):
             budget=budget,
             selected_places=selected_places,
             travel_date=str(start_date),
-            count=3  # GPT에게 3개 요청
+            count=3  # recommend 3 plans
         )
-        st.session_state.schedules = result.split("\n\n")  # 일정 A, B, C로 분리
-        st.session_state.selected_schedule = None
+        st.session_state.schedule_result = result.split("---")
+        st.session_state.chat_history = [
+            {"role": "system", "content": "너는 여행 일정 전문가야. 아래 일정에 대해 사용자의 수정 요청에 응답해줘."},
+            {"role": "user", "content": f"기존 일정:
+{result}"}
+        ]
+        time.sleep(1)
 
-# ✅ 일정 선택 화면
-if st.session_state.schedules and not st.session_state.selected_schedule:
-    st.subheader("🗓️ 아래 일정 중 하나를 선택하세요!")
-    for i, schedule in enumerate(st.session_state.schedules):
-        with st.expander(f"일정 {chr(65+i)} 보기"):
-            st.markdown(schedule, unsafe_allow_html=True)
-        if st.button(f"✅ 일정 {chr(65+i)} 선택", key=f"select_{i}"):
-            st.session_state.selected_schedule = schedule
-            st.session_state.chat_history = [
-                {"role": "system", "content": "너는 여행 일정 전문가야. 아래 일정에 대해 사용자의 수정 요청에 응답해줘."},
-                {"role": "user", "content": f"기존 일정:\n{schedule}"}
-            ]
-            st.rerun()
-    if st.button("🔄 마음에 드는 게 없어요. 다시 추천받기"):
-        st.session_state.schedules = []
-        st.rerun()
+# ✅ 일정 선택하기
+if st.session_state.schedule_result:
+    st.subheader("🗂️ 아래 일정 중 마음에 드는 것을 선택하세요")
+    for i, plan in enumerate(st.session_state.schedule_result):
+        with st.expander(f"✈️ 일정 {i+1}"):
+            st.markdown(plan.strip())
 
-# ✅ 선택된 일정 → 수정 요청 인터페이스
-if st.session_state.selected_schedule:
-    st.subheader("✏️ 일정 수정 요청하기")
+    selected = st.radio("🧐 어떤 일정이 마음에 드시나요?", options=["일정 1", "일정 2", "일정 3", "마음에 드는 게 없어요"])
 
-    for chat in st.session_state.chat_history:
-        role = chat["role"]
-        bubble_class = "chat-bubble-user" if role == "user" else "chat-bubble-assistant"
-        st.markdown(f'<div class="{bubble_class}">{chat["content"]}</div>', unsafe_allow_html=True)
+    if selected == "마음에 드는 게 없어요":
+        st.warning("😅 다시 새로운 일정을 생성할게요!")
+        if st.button("새로운 일정 다시 추천받기"):
+            with st.spinner("새로운 일정 다시 추천 중..."):
+                result = generate_schedule_gpt(
+                    location=destination,
+                    days=days,
+                    style=travel_type,
+                    companions=companions,
+                    budget=budget,
+                    selected_places=selected_places,
+                    travel_date=str(start_date),
+                    count=3
+                )
+                st.session_state.schedule_result = result.split("---")
+                st.session_state.chat_history = [
+                    {"role": "system", "content": "너는 여행 일정 전문가야. 아래 일정에 대해 사용자의 수정 요청에 응답해줘."},
+                    {"role": "user", "content": f"기존 일정:
+{result}"}
+                ]
+                st.rerun()
 
-    user_msg = st.chat_input("수정하고 싶은 내용을 입력하세요!")
-    if user_msg:
-        st.markdown(f'<div class="chat-bubble-user">{user_msg}</div>', unsafe_allow_html=True)
-        st.session_state.chat_history.append({"role": "user", "content": user_msg})
+    else:
+        idx = int(selected[-1]) - 1
+        st.session_state.selected_plan = st.session_state.schedule_result[idx].strip()
+        st.markdown("""
+        <hr>
+        <h4>✏️ 일정 수정 요청하기</h4>
+        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="chat-bubble-assistant">{st.session_state.selected_plan}</div>', unsafe_allow_html=True)
 
-        from gpt_client import client
-        try:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=st.session_state.chat_history
-            )
-            ai_msg = response.choices[0].message.content
-            st.markdown(f'<div class="chat-bubble-assistant">{ai_msg}</div>', unsafe_allow_html=True)
-            st.session_state.chat_history.append({"role": "assistant", "content": ai_msg})
-        except Exception as e:
-            st.error(f"⚠️ 에러 발생: {e}")
+        user_msg = st.chat_input("수정하고 싶은 내용을 입력하세요!")
+        if user_msg:
+            st.session_state.chat_history.append({"role": "user", "content": user_msg})
+            from gpt_client import client
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=st.session_state.chat_history
+                )
+                ai_msg = response.choices[0].message.content
+                st.markdown(f'<div class="chat-bubble-assistant">{ai_msg}</div>', unsafe_allow_html=True)
+                st.session_state.chat_history.append({"role": "assistant", "content": ai_msg})
+            except Exception as e:
+                st.error(f"⚠️ 에러 발생: {e}")
