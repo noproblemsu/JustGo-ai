@@ -3,6 +3,10 @@ import time
 from datetime import date, timedelta
 from gpt_client import generate_schedule_gpt  # ✅ GPT 호출 함수
 
+# ✅ 외부 스타일 적용 (frontend/style.css)
+with open("frontend/style.css", "r", encoding="utf-8") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 # ✅ UI 구성
 st.title("🌏 JustGo 여행플래너")
 
@@ -66,7 +70,7 @@ if st.button("일정 추천 받기"):
             {"role": "user", "content": f"기존 일정:\n{result}"}
         ]
         time.sleep(1)
-        st.info(result)
+        st.markdown(f'<div class="chat-bubble-assistant">{result}</div>', unsafe_allow_html=True)
 
 # ✅ 일정 수정 요청
 if st.session_state.schedule_result:
@@ -76,15 +80,15 @@ if st.session_state.schedule_result:
     for chat in st.session_state.chat_history:
         role = chat["role"]
         if role == "user":
-            st.chat_message("user").write(chat["content"])
+            st.markdown(f'<div class="chat-bubble-user">{chat["content"]}</div>', unsafe_allow_html=True)
         elif role == "assistant":
-            st.chat_message("assistant").write(chat["content"])
+            st.markdown(f'<div class="chat-bubble-assistant">{chat["content"]}</div>', unsafe_allow_html=True)
 
     # ✉️ 사용자 입력 받기
     user_msg = st.chat_input("수정하고 싶은 내용을 입력하세요!")
 
     if user_msg:
-        st.chat_message("user").write(user_msg)
+        st.markdown(f'<div class="chat-bubble-user">{user_msg}</div>', unsafe_allow_html=True)
         st.session_state.chat_history.append({"role": "user", "content": user_msg})
 
         from gpt_client import client
@@ -94,7 +98,7 @@ if st.session_state.schedule_result:
                 messages=st.session_state.chat_history
             )
             ai_msg = response.choices[0].message.content
-            st.chat_message("assistant").write(ai_msg)
+            st.markdown(f'<div class="chat-bubble-assistant">{ai_msg}</div>', unsafe_allow_html=True)
             st.session_state.chat_history.append({"role": "assistant", "content": ai_msg})
         except Exception as e:
             st.error(f"⚠️ 에러 발생: {e}")
