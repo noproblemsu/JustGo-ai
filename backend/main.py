@@ -68,6 +68,16 @@ if st.button("일정 추천 받기"):
 # ✅ 일정 수정 요청
 if st.session_state.schedule_result:
     st.subheader("✏️ 일정 수정 요청하기")
+
+    # 🔁 이전 대화 전체 출력 (채팅처럼)
+    for chat in st.session_state.chat_history:
+        role = chat["role"]
+        if role == "user":
+            st.chat_message("user").write(chat["content"])
+        elif role == "assistant":
+            st.chat_message("assistant").write(chat["content"])
+
+    # ✉️ 사용자 입력 받기
     user_msg = st.chat_input("수정하고 싶은 내용을 입력하세요!")
 
     if user_msg:
@@ -83,5 +93,3 @@ if st.session_state.schedule_result:
             ai_msg = response.choices[0].message.content
             st.chat_message("assistant").write(ai_msg)
             st.session_state.chat_history.append({"role": "assistant", "content": ai_msg})
-        except Exception as e:
-            st.error(f"⚠️ 에러 발생: {e}")
