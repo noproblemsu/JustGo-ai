@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from gpt_client import generate_schedule_gpt  # ✅ GPT 호출 함수
 
 # ✅ 외부 스타일 적용 (frontend/style.css)
-with open("frontend/style.css", "r", encoding="utf-8") as f:
+with open("../frontend/style.css", "r", encoding="utf-8") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # ✅ UI 구성
