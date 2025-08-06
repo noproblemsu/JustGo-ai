@@ -1,7 +1,7 @@
 from openai import OpenAI
 from prompts import build_prompt
 
-client = OpenAI(api_key="your-api-key")  # 🔑 실제 키로 교체하세요
+client = OpenAI(api_key="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")
 
 def generate_schedule_gpt(location, days, style, companions, budget, selected_places, travel_date, count=3):
     prompt = build_prompt(
