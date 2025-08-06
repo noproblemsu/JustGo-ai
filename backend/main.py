@@ -73,10 +73,20 @@ if st.button("일정 추천 받기"):
             {"role": "user", "content": f"기존 일정:\n{result}"}
         ]
         time.sleep(1)
-        st.markdown(f'<div class="chat-bubble-assistant">{result}</div>', unsafe_allow_html=True)
 
-# ✅ 일정 수정 요청
+# ✅ 일정 출력 (카드 토글 방식 적용)
 if st.session_state.schedule_result:
+    st.subheader("🗓️ 추천 일정")
+
+    schedules = st.session_state.schedule_result.split("---")
+    for idx, schedule in enumerate(schedules, start=1):
+        lines = schedule.strip().split("\n")
+        title = lines[0].replace("### ", "") if lines else f"일정추천 {idx}"
+        detail = "\n".join(lines[1:])
+
+        with st.expander(title):
+            st.markdown(f'<div class="chat-bubble-assistant">{detail}</div>', unsafe_allow_html=True)
+
     st.subheader("✏️ 일정 수정 요청하기")
 
     for chat in st.session_state.chat_history:
