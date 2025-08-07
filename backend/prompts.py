@@ -5,8 +5,9 @@ def build_prompt(location, days, budget, companions, style, selected_places, tra
     selected_str = '\n'.join([f"- {place.strip()}" for place in selected_places if place.strip()]) or "없음"
 
     # 날짜 리스트 생성
-    start_date = datetime.strptime(travel_date, "%Y-%m-%d")
+    start_date = travel_date
     date_list = [(start_date + timedelta(days=i)).strftime("%Y-%m-%d (%a)") for i in range(days)]
+
     date_str = '\n'.join([f"- {d}" for d in date_list])
 
     return f"""

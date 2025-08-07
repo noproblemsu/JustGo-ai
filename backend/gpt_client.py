@@ -28,3 +28,35 @@ def generate_schedule_gpt(location, days, style, companions, budget, selected_pl
 
     # ✂️ 결과를 ---로 구분
     return "\n\n---\n\n".join(results)
+
+def ask_gpt(prompt: str):
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "당신은 여행지 추천 전문가입니다."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.7,
+    )
+    return response.choices[0].message.content
+
+def extract_places(response):
+    sightseeing = []
+    restaurants = []
+    
+    lines = response.splitlines()
+    current = None
+
+    for line in lines:
+        if "관광지 추천" in line:
+            current = "sightseeing"
+        elif "맛집 추천" in line:
+            current = "restaurants"
+        elif line.strip().startswith(tuple("1234567890")):
+            if current == "sightseeing":
+                sightseeing.append(line)
+            elif current == "restaurants":
+                restaurants.append(line)
+
+    return sightseeing, restaurants  # ✅ 반드시 두 개 반환
+
