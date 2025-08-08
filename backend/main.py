@@ -73,7 +73,8 @@ if st.button("일정 추천 받기"):
             count=3
         )
 
-        raw_blocks = re.split(r"(?=일정추천\s*\d+:)", result.strip())
+        # ✅ 일정 블록 분리
+        raw_blocks = re.split(r"(?=^일정추천\s*\d+:)", result.strip(), flags=re.MULTILINE)
         unique_titles = set()
         cleaned_schedules = []
 
@@ -109,14 +110,12 @@ if st.session_state.schedule_result:
         with st.expander(title):
             st.markdown(f'<div class="chat-bubble-assistant">{detail}</div>', unsafe_allow_html=True)
 
-    # ✅ 총 비용 계산 결과
     st.markdown(f"""
     <div class="chat-bubble-assistant"><strong>총 예상 비용</strong><br>
     총 예상 비용은 약 {total_cost:,}원으로, 입력 예산인 {budget:,}원 내에서 잘 계획되었어요.
     </div>
     """, unsafe_allow_html=True)
 
-    # ✅ 챗봇 수정 입력
     st.subheader("✏️ 일정 수정 요청하기")
     for chat in st.session_state.chat_history:
         role = chat["role"]
