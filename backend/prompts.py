@@ -1,4 +1,18 @@
-return f"""
+from datetime import datetime, timedelta
+
+def build_prompt(location, days, budget, companions, style, selected_places, travel_date, count=3):
+    companion_str = ', '.join(companions) if companions else "없음"
+    selected_str = '\n'.join([f"- {place.strip()}" for place in selected_places if place.strip()]) or "없음"
+
+    if isinstance(travel_date, str):
+        start_date = datetime.strptime(travel_date, "%Y-%m-%d")
+    else:
+        start_date = travel_date
+
+    date_list = [(start_date + timedelta(days=i)).strftime("%Y-%m-%d (%a)") for i in range(days)]
+    date_str = '\n'.join([f"- {d}" for d in date_list])
+
+    return f"""
 너는 여행 일정 전문 플래너야.
 
 여행지는 {location}이고, 여행 기간은 총 {days}일이야.
