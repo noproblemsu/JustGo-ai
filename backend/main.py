@@ -77,20 +77,21 @@ if st.button("일정 추천 받기"):
             title = lines[0].strip()
             detail = lines[1].strip()
 
-            # "--- **날짜**" 형태 제거
+            # ✅ "--- **날짜**" 형태 제거
             detail = re.sub(r"^---\s+\*\*(.*?)\*\*", r"\1", detail)
+
             cleaned_schedules.append((title, detail))
 
         st.session_state.schedule_result = cleaned_schedules
-        full_result_for_gpt = "\n\n".join([f"{title}\n{detail}" for title, detail in cleaned_schedules])
 
+        full_result_for_gpt = "\n\n".join([f"{title}\n{detail}" for title, detail in cleaned_schedules])
         st.session_state.chat_history = [
             {"role": "system", "content": "너는 여행 일정 전문가야. 아래 일정에 대해 사용자의 수정 요청에 응답해줘."},
             {"role": "user", "content": f"기존 일정:\n{full_result_for_gpt}"}
         ]
         time.sleep(1)
 
-# ✅ 일정 출력 (토글)
+# ✅ 일정 출력
 if st.session_state.schedule_result:
     st.subheader("📅 추천 일정")
 
