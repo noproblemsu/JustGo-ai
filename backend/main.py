@@ -8,7 +8,7 @@ from gpt_client import generate_schedule_gpt
 with open("../frontend/style.css", "r", encoding="utf-8") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-st.title("🌍 JustGo 여행플래너")
+st.title("\U0001F30F JustGo 여행플래너")
 
 # ✅ 여행지 입력
 destination = st.selectbox("어디로 여행 가시나요?", [
@@ -65,12 +65,12 @@ if st.button("일정 추천 받기"):
             companions=companions,
             budget=budget,
             selected_places=selected_places,
-            travel_date=str(start_date),
+            travel_date=start_date,  # 날짜 그대로 넘김
             count=3
         )
 
         # ✅ 일정 블록 추출 및 파싱
-        raw_blocks = re.findall(r"(일정추천\s*\d+:\s*.+?)(?=(?:\n일정추천\s*\d+:)|$)", result, re.DOTALL)
+        raw_blocks = re.findall(r"(일정추천\s*\d+:\s*.+?)(?=\n일정추천\s*\d+:|\Z)", result, re.DOTALL)
         unique_titles = set()
         cleaned_schedules = []
 
@@ -96,7 +96,7 @@ if st.button("일정 추천 받기"):
 
 # ✅ 일정 출력 (카드 토글 방식 적용)
 if st.session_state.schedule_result:
-    st.subheader("📅 추천 일정")
+    st.subheader("\U0001F4C5 추천 일정")
 
     for title, detail in st.session_state.schedule_result:
         with st.expander(title):
