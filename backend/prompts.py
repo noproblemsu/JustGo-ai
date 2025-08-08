@@ -4,8 +4,11 @@ def build_prompt(location, days, budget, companions, style, selected_places, tra
     companion_str = ', '.join(companions) if companions else "없음"
     selected_str = '\n'.join([f"- {place.strip()}" for place in selected_places if place.strip()]) or "없음"
 
-    # ✅ 문자열 → datetime 변환
-    start_date = datetime.strptime(travel_date, "%Y-%m-%d")
+    # ✅ 문자열 또는 datetime.date 모두 처리
+    if isinstance(travel_date, str):
+        start_date = datetime.strptime(travel_date, "%Y-%m-%d")
+    else:
+        start_date = travel_date
 
     # 날짜 리스트 생성
     date_list = [(start_date + timedelta(days=i)).strftime("%Y-%m-%d (%a)") for i in range(days)]
