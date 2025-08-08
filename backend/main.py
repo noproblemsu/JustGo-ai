@@ -69,8 +69,8 @@ if st.button("일정 추천 받기"):
             count=3
         )
 
-        # ✅ 일정 블록 분리 및 정제
-        raw_blocks = re.split(r"(?=일정추천\s*\d+:)", result.strip())
+        # ✅ 일정 블록 분리 및 정제 (정확히 3개로 분리)
+        raw_blocks = re.findall(r"(일정추천\s*\d+:.*?)(?=일정추천\s*\d+:|$)", result.strip(), re.DOTALL)
         unique_titles = set()
         cleaned_schedules = []
 
@@ -81,8 +81,8 @@ if st.button("일정 추천 받기"):
             title = lines[0].strip()
             detail = lines[1].strip()
 
-            # ✅ 1일차에만 붙는 "--- **날짜**" 제거
-            detail = re.sub(r"^---\s+\*\*(.*?)\*\*", r"\1", detail)
+            # ✅ "--- **2025-08-08 (Fri)**" 제거
+            detail = re.sub(r"^---\s+\*\*(.*?)\*\*", r"**\1**", detail)
 
             if title not in unique_titles:
                 unique_titles.add(title)
