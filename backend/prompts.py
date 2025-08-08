@@ -1,9 +1,28 @@
-return f"""
-너는 여행 일정 전문 플래너야.
+from datetime import datetime, timedelta
 
-여행지는 {location}이고, 여행 기간은 총 {days}일이야.
-여행 날짜는 다음과 같아:
-{date_str}
+def build_prompt(location, days, budget, companions, style, selected_places, travel_date, count=3):
+    companion_str = ', '.join(companions) if companions else "없음"
+    selected_str = '\n'.join([f"- {place.strip()}" for place in selected_places if place.strip()]) or "없음"
+
+    # 문자열 또는 datetime.date 처리
+    if isinstance(travel_date, str):
+        start_date = datetime.strptime(travel_date, "%Y-%m-%d")
+    else:
+        start_date = travel_date
+
+    # 날짜 리스트 생성
+    date_list = [(start_date + timedelta(days=i)).strftime("%Y-%m-%d (%a)") for i in range(days)]
+    date_str = '\n'.join([f"- {d}" for d in date_list])
+
+    return f"""
+    너는 여행 일정 전문 플래너야.
+
+    여행지는 {location}이고, 여행 기간은 총 {days}일이야.
+    여행 날짜는 다음과 같아:
+    {date_str}
+
+    ... (이하 프롬프트 내용 그대로 유지)
+    """
 
 각 날짜에 해당하는 요일도 포함되어 있어. **각 날짜마다 아침, 점심, 저녁 일정**을 모두 짜줘.
 
