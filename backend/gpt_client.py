@@ -25,9 +25,7 @@ def generate_schedule_gpt(location, days, style, companions, budget, selected_pl
         ]
     )
 
-<<<<<<< HEAD
-    # ✂️ 결과를 ---로 구분
-    return "\n\n---\n\n".join(results)
+    return response.choices[0].message.content.strip()  # 💡 하나의 응답 전체를 반환
 
 def ask_gpt(prompt: str):
     response = client.chat.completions.create(
@@ -43,7 +41,7 @@ def ask_gpt(prompt: str):
 def extract_places(response):
     sightseeing = []
     restaurants = []
-    
+
     lines = response.splitlines()
     current = None
 
@@ -59,7 +57,3 @@ def extract_places(response):
                 restaurants.append(line)
 
     return sightseeing, restaurants  # ✅ 반드시 두 개 반환
-
-=======
-    return response.choices[0].message.content.strip()
->>>>>>> 49bc3e5 (fix: 대량 업데이트)
