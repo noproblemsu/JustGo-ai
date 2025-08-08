@@ -65,11 +65,11 @@ if st.button("일정 추천 받기"):
             companions=companions,
             budget=budget,
             selected_places=selected_places,
-            travel_date=str(start_date),  # 문자열로 변환
+            travel_date=str(start_date),
             count=3
         )
 
-        # ✅ 일정 블록 분리 및 파싱
+        # ✅ 일정 블록 분리 및 정제
         raw_blocks = re.split(r"(?=일정추천\s*\d+:)", result.strip())
         unique_titles = set()
         cleaned_schedules = []
@@ -80,6 +80,10 @@ if st.button("일정 추천 받기"):
                 continue
             title = lines[0].strip()
             detail = lines[1].strip()
+
+            # ✅ 1일차에만 붙는 "--- **날짜**" 제거
+            detail = re.sub(r"^---\s+\*\*(.*?)\*\*", r"\1", detail)
+
             if title not in unique_titles:
                 unique_titles.add(title)
                 cleaned_schedules.append((title, detail))
