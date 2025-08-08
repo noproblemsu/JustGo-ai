@@ -10,7 +10,7 @@ with open("../frontend/style.css", "r", encoding="utf-8") as f:
 
 st.title("🌍 JustGo 여행플래너")
 
-# ✅ 입력값 받기
+# ✅ 입력 UI
 destination = st.selectbox("어디로 여행 가시나요?", [
     "강릉", "경주", "광주", "대구", "대전", "부산", "서울",
     "속초", "여수", "울산", "인천", "전주", "제주도", "직접 입력"
@@ -40,13 +40,19 @@ with st.expander("추가 옵션"):
         placeholder="예: 불국사, 황리단길, 경주월드 등"
     ).split(',')
 
-# ✅ 세션 초기화
+# ✅ 세션 상태 초기화
 if "schedule_result" not in st.session_state:
     st.session_state.schedule_result = []
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# ✅ 일정 생성 요청
+# ✅ 비용 합산 함수
+def parse_total_cost(text):
+    prices = re.findall(r'약\s*([\d,]+)원', text)
+    total = sum(int(p.replace(',', '')) for p in prices)
+    return total
+
+# ✅ GPT 호출 및 결과 처리
 if st.button("일정 추천 받기"):
     companions = []
     if with_friends: companions.append("친구")
@@ -66,32 +72,29 @@ if st.button("일정 추천 받기"):
             count=3
         )
 
-
-               # 일정추천 N: 으로 분리
-        raw_blocks = re.split(r"(?=일정추천\s*\d+:)", result.strip())
+        raw_blocks = re.split(r"(?:---)?\s*일정추천\s*\d+:", result.strip())
+        titles = re.findall(r"(일정추천\s*\d+:\s*[^\n]+)", result.strip())
         cleaned_schedules = []
 
-        for block in raw_blocks:
-            lines = block.strip().split("\n", 1)
-            if len(lines) < 2:
-                continue
-            title = lines[0].strip()
-            detail = lines[1].strip()
+        for i, block in enumerate(raw_blocks[1:]):
+            title = titles[i] if i < len(titles) else f"일정추천 {i+1}"
+            detail = block.strip()
 
-            # 날짜별 구간 보존 & 불필요한 줄 제거
-            days_split = re.split(r"(?=\d{4}-\d{2}-\d{2} \([A-Za-z가-힣]+\))", detail.strip())
-            full_schedule = "\n".join(days_split).strip()
+            # 💡 중간에 포함된 총 예상 비용 제거
+            detail = re.sub(r"총 예상 비용.*?원\W*", "", detail)
 
-            # 총 비용은 각 일정 마지막 1번만 표시되도록 필터링 유지
-            full_schedule = re.sub(r"(총 예상 비용은.*?)\n(?=.*총 예상 비용은)", "", full_schedule, flags=re.DOTALL)
+            # 💡 총 비용 계산
+            cost = parse_total_cost(detail)
+            detail += f"\n\n총 예상 비용은 약 {cost:,}원으로, 입력 예산인 {budget:,}원 내에서 잘 계획되었어요."
 
-            cleaned_schedules.append((title, full_schedule))
+            cleaned_schedules.append((title, detail))
 
+        st.session_state.schedule_result = cleaned_schedules
+        full_text = "\n\n".join([f"{t}\n{d}" for t, d in cleaned_schedules])
 
-        full_result_for_gpt = "\n\n".join([f"{title}\n{detail}" for title, detail in cleaned_schedules])
         st.session_state.chat_history = [
             {"role": "system", "content": "너는 여행 일정 전문가야. 아래 일정에 대해 사용자의 수정 요청에 응답해줘."},
-            {"role": "user", "content": f"기존 일정:\n{full_result_for_gpt}"}
+            {"role": "user", "content": f"기존 일정:\n{full_text}"}
         ]
         time.sleep(1)
 
@@ -103,7 +106,6 @@ if st.session_state.schedule_result:
         with st.expander(title):
             st.markdown(f'<div class="chat-bubble-assistant">{detail}</div>', unsafe_allow_html=True)
 
-    # ✅ 수정 입력창
     st.subheader("✏️ 일정 수정 요청하기")
     for chat in st.session_state.chat_history:
         role = chat["role"]
