@@ -4,11 +4,11 @@ import re
 from datetime import date, timedelta
 from gpt_client import generate_schedule_gpt
 
-# ✅ 외부 스타일 적용 (frontend/style.css)
+# ✅ 외부 스타일 적용
 with open("../frontend/style.css", "r", encoding="utf-8") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-st.title("\U0001F30F JustGo 여행플래너")
+st.title("🌍 JustGo 여행플래너")
 
 # ✅ 여행지 입력
 destination = st.selectbox("어디로 여행 가시나요?", [
@@ -65,28 +65,28 @@ if st.button("일정 추천 받기"):
             companions=companions,
             budget=budget,
             selected_places=selected_places,
-            travel_date=start_date,  # 날짜 그대로 넘김
+            travel_date=str(start_date),  # 문자열로 변환
             count=3
         )
 
-       raw_blocks = re.split(r"(?=일정추천\s*\d+:)", result.strip())
-unique_titles = set()
-cleaned_schedules = []
+        # ✅ 일정 블록 분리 및 파싱
+        raw_blocks = re.split(r"(?=일정추천\s*\d+:)", result.strip())
+        unique_titles = set()
+        cleaned_schedules = []
 
-for block in raw_blocks:
-    lines = block.strip().split("\n", 1)
-    if len(lines) < 2:
-        continue
-    title = lines[0].strip()
-    detail = lines[1].strip()
+        for block in raw_blocks:
+            lines = block.strip().split("\n", 1)
+            if len(lines) < 2:
+                continue
+            title = lines[0].strip()
+            detail = lines[1].strip()
+            if title not in unique_titles:
+                unique_titles.add(title)
+                cleaned_schedules.append((title, detail))
 
-    if title not in unique_titles:
-        unique_titles.add(title)
-        cleaned_schedules.append((title, detail))
-
-st.session_state.schedule_result = cleaned_schedules
-
+        st.session_state.schedule_result = cleaned_schedules
         full_result_for_gpt = "\n\n".join([f"{title}\n{detail}" for title, detail in cleaned_schedules])
+
         st.session_state.chat_history = [
             {"role": "system", "content": "너는 여행 일정 전문가야. 아래 일정에 대해 사용자의 수정 요청에 응답해줘."},
             {"role": "user", "content": f"기존 일정:\n{full_result_for_gpt}"}
@@ -95,7 +95,7 @@ st.session_state.schedule_result = cleaned_schedules
 
 # ✅ 일정 출력 (카드 토글 방식 적용)
 if st.session_state.schedule_result:
-    st.subheader("\U0001F4C5 추천 일정")
+    st.subheader("📅 추천 일정")
 
     for title, detail in st.session_state.schedule_result:
         with st.expander(title):
