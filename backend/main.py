@@ -66,7 +66,8 @@ if st.button("일정 추천 받기"):
             count=3
         )
 
-        # ✅ 일정추천 N: 기준으로 분리
+
+               # 일정추천 N: 으로 분리
         raw_blocks = re.split(r"(?=일정추천\s*\d+:)", result.strip())
         cleaned_schedules = []
 
@@ -77,12 +78,15 @@ if st.button("일정 추천 받기"):
             title = lines[0].strip()
             detail = lines[1].strip()
 
-            # ✅ "--- **날짜**" 형태 제거
-            detail = re.sub(r"^---\s+\*\*(.*?)\*\*", r"\1", detail)
+            # 날짜별 구간 보존 & 불필요한 줄 제거
+            days_split = re.split(r"(?=\d{4}-\d{2}-\d{2} \([A-Za-z가-힣]+\))", detail.strip())
+            full_schedule = "\n".join(days_split).strip()
 
-            cleaned_schedules.append((title, detail))
+            # 총 비용은 각 일정 마지막 1번만 표시되도록 필터링 유지
+            full_schedule = re.sub(r"(총 예상 비용은.*?)\n(?=.*총 예상 비용은)", "", full_schedule, flags=re.DOTALL)
 
-        st.session_state.schedule_result = cleaned_schedules
+            cleaned_schedules.append((title, full_schedule))
+
 
         full_result_for_gpt = "\n\n".join([f"{title}\n{detail}" for title, detail in cleaned_schedules])
         st.session_state.chat_history = [
