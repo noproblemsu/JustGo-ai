@@ -10,7 +10,7 @@ with open("../frontend/style.css", "r", encoding="utf-8") as f:
 
 st.title("🌍 JustGo 여행플래너")
 
-# ✅ 입력 폼
+# ✅ 입력값 받기
 destination = st.selectbox("어디로 여행 가시나요?", [
     "강릉", "경주", "광주", "대구", "대전", "부산", "서울",
     "속초", "여수", "울산", "인천", "전주", "제주도", "직접 입력"
@@ -40,20 +40,13 @@ with st.expander("추가 옵션"):
         placeholder="예: 불국사, 황리단길, 경주월드 등"
     ).split(',')
 
+# ✅ 세션 초기화
 if "schedule_result" not in st.session_state:
     st.session_state.schedule_result = []
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# ✅ 비용 파싱 함수
-def parse_total_cost(text):
-    lines = text.splitlines()
-    lines = [line for line in lines if not line.strip().startswith("총 예상 비용은")]
-    all_text = "\n".join(lines)
-    matches = re.findall(r'(\d{1,3}(?:,\d{3})*)원', all_text)
-    return sum(int(m.replace(',', '')) for m in matches)
-
-# ✅ 일정 생성
+# ✅ 일정 생성 요청
 if st.button("일정 추천 받기"):
     companions = []
     if with_friends: companions.append("친구")
@@ -73,9 +66,8 @@ if st.button("일정 추천 받기"):
             count=3
         )
 
-        # ✅ 일정 블록 분리
-        raw_blocks = re.split(r"(?=^일정추천\s*\d+:)", result.strip(), flags=re.MULTILINE)
-        unique_titles = set()
+        # ✅ 일정추천 N: 기준으로 분리
+        raw_blocks = re.split(r"(?=일정추천\s*\d+:)", result.strip())
         cleaned_schedules = []
 
         for block in raw_blocks:
@@ -84,11 +76,10 @@ if st.button("일정 추천 받기"):
                 continue
             title = lines[0].strip()
             detail = lines[1].strip()
-            detail = re.sub(r"^---\s+\*\*(.*?)\*\*", r"\1", detail)
 
-            if title not in unique_titles:
-                unique_titles.add(title)
-                cleaned_schedules.append((title, detail))
+            # "--- **날짜**" 형태 제거
+            detail = re.sub(r"^---\s+\*\*(.*?)\*\*", r"\1", detail)
+            cleaned_schedules.append((title, detail))
 
         st.session_state.schedule_result = cleaned_schedules
         full_result_for_gpt = "\n\n".join([f"{title}\n{detail}" for title, detail in cleaned_schedules])
@@ -99,23 +90,15 @@ if st.button("일정 추천 받기"):
         ]
         time.sleep(1)
 
-# ✅ 출력
+# ✅ 일정 출력 (토글)
 if st.session_state.schedule_result:
     st.subheader("📅 추천 일정")
-    total_cost = 0
 
     for title, detail in st.session_state.schedule_result:
-        cost = parse_total_cost(detail)
-        total_cost += cost
         with st.expander(title):
             st.markdown(f'<div class="chat-bubble-assistant">{detail}</div>', unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div class="chat-bubble-assistant"><strong>총 예상 비용</strong><br>
-    총 예상 비용은 약 {total_cost:,}원으로, 입력 예산인 {budget:,}원 내에서 잘 계획되었어요.
-    </div>
-    """, unsafe_allow_html=True)
-
+    # ✅ 수정 입력창
     st.subheader("✏️ 일정 수정 요청하기")
     for chat in st.session_state.chat_history:
         role = chat["role"]
