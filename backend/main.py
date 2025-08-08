@@ -69,23 +69,22 @@ if st.button("일정 추천 받기"):
             count=3
         )
 
-        # ✅ 일정 블록 추출 및 파싱
-        raw_blocks = re.findall(r"(일정추천\s*\d+:\s*.+?)(?=\n일정추천\s*\d+:|\Z)", result, re.DOTALL)
-        unique_titles = set()
-        cleaned_schedules = []
+       raw_blocks = re.split(r"(?=일정추천\s*\d+:)", result.strip())
+unique_titles = set()
+cleaned_schedules = []
 
-        for block in raw_blocks:
-            lines = block.strip().split("\n", 1)
-            if len(lines) < 2:
-                continue
-            title = lines[0].strip()
-            detail = lines[1].strip()
+for block in raw_blocks:
+    lines = block.strip().split("\n", 1)
+    if len(lines) < 2:
+        continue
+    title = lines[0].strip()
+    detail = lines[1].strip()
 
-            if title not in unique_titles:
-                unique_titles.add(title)
-                cleaned_schedules.append((title, detail))
+    if title not in unique_titles:
+        unique_titles.add(title)
+        cleaned_schedules.append((title, detail))
 
-        st.session_state.schedule_result = cleaned_schedules
+st.session_state.schedule_result = cleaned_schedules
 
         full_result_for_gpt = "\n\n".join([f"{title}\n{detail}" for title, detail in cleaned_schedules])
         st.session_state.chat_history = [
