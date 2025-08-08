@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>날짜 선택</title>
+
+  <!-- ✅ Flatpickr CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Istok Web', sans-serif;
+      background-color: #f0f0f0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .date-selection-container {
+      max-width: 393px;
+      height: 100vh;
+      margin: 0 auto;
+      background-color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      padding: 76px 16px 39px;
+    }
+
+    .date-selection-header {
+      flex-shrink: 0;
+    }
+
+    .title {
+      color: #000000;
+      font-weight: 700;
+      font-size: 30px;
+      line-height: 43px;
+      text-align: left;
+      margin: 0;
+    }
+
+    .date-selection-content {
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    #calendar {
+      width: auto;
+      display: inline-block;
+      transform: translateY(-20px); /* 정중앙 보정 */
+      margin: 0 auto;
+    }
+
+    .flatpickr-calendar.inline {
+      position: relative;
+      width: 100% !important;
+      font-size: 18px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    .flatpickr-days {
+      padding: 0 10px;
+    }
+
+    .flatpickr-day {
+      text-align: center;
+      padding-right: 5%;
+      position: relative;
+    }
+
+    .flatpickr-weekday {
+      text-align: center;
+    }
+
+    .flatpickr-innerContainer {
+      display: flex;
+      justify-content: center;
+    }
+
+    .flatpickr-current-month {
+      display: flex;
+      flex-direction: row !important;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .flatpickr-current-month input.cur-year {
+      order: 1;
+      width: 80px;
+      text-align: left;
+      font-weight: bold;
+    }
+
+    .flatpickr-monthDropdown-months {
+      order: 2;
+      width: auto;
+      font-size: 14px;
+    }
+
+    .flatpickr-monthDropdown-months option {
+      font-size: 14px;
+    }
+
+    .date-selection-footer {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      max-width: 361px;
+      height: 55px;
+      background-color: #0059ff;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 18px;
+      line-height: 26px;
+      text-align: center;
+    }
+
+    .skip-link {
+      color: #000000;
+      font-weight: 400;
+      font-size: 12px;
+      line-height: 17px;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    @media (max-width: 393px) {
+      .date-selection-container {
+        height: 100vh;
+        padding: 15% 5% 10%;
+      }
+
+      .flatpickr-calendar {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <section id="date-selection">
+    <div class="date-selection-container">
+      <header class="date-selection-header">
+        <h1 class="title">언제 떠나시나요?</h1>
+      </header>
+
+      <main class="date-selection-content">
+        <div id="calendar"></div>
+      </main>
+
+      <footer class="date-selection-footer">
+        <button class="btn-primary">완료</button>
+        <a href="#" class="skip-link">다음에 하기</a>
+      </footer>
+    </div>
+  </section>
+  <!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>여행 날짜 선택</title>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f5f5f5;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .date-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    input[type="date"] {
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    .save-button {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      background-color: #3b5bfe;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>여행 날짜 선택</h1>
+
+  <div class="date-input-group">
+    <label for="start-date">시작 날짜</label>
+    <input type="date" id="start-date" />
+
+    <label for="end-date">종료 날짜</label>
+    <input type="date" id="end-date" />
+  </div>
+
+  <button class="save-button" onclick="saveDate()">날짜 저장</button>
+
+  <script>
+    function saveDate() {
+      const start = document.getElementById("start-date").value;
+      const end = document.getElementById("end-date").value;
+
+      if (!start || !end) {
+        alert("시작 날짜와 종료 날짜를 모두 선택해주세요.");
+        return;
+      }
+
+      if (end < start) {
+        alert("종료 날짜는 시작 날짜보다 이후여야 합니다.");
+        return;
+      }
+
+      const range = `${start} ~ ${end}`;
+      localStorage.setItem('date', range);
+      window.location.href = 'justgoset.html';
+    }
+  </script>
+</body>
+</html>
+
+
+ <!-- ✅ Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+const fromPage = urlParams.get("from");
+
+  let selectedDates = [];
+
+  const calendar = flatpickr("#calendar", {
+    mode: "range",
+    dateFormat: "Y-m-d",
+    locale: "ko",
+    minDate: "today",
+    inline: true,
+    onChange: function (dates) {
+      selectedDates = dates.map(date => date.toISOString().split('T')[0]);
+    }
+  });
+
+  // ✅ 완료 버튼 클릭 시
+  document.querySelector(".btn-primary").addEventListener("click", function () {
+  if (selectedDates.length === 0) {
+    alert("날짜를 선택해주세요.");
+  } else {
+    localStorage.setItem("selectedDates", JSON.stringify(selectedDates));
+
+    if (fromPage === "justgoset.html") {
+      location.href = "justgoset.html";
+    } else {
+      location.href = "justgomoney.html";
+    }
+  }
+});
+
+
+ // ✅ 다음에 하기 클릭 시 (선택하지 않아도 넘어가기)
+document.querySelector(".skip-link").addEventListener("click", function () {
+  localStorage.removeItem("selectedDates");
+  localStorage.setItem("skipRecommendation", "true");
+
+  if (fromPage === "justgoset.html") {
+    location.href = "justgoset.html";
+  } else {
+    location.href = "justgomoney.html";
+  }
+});
+
+
+</script>
+
+
+

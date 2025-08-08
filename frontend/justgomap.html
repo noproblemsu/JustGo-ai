@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>여행 지도</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Istok Web', sans-serif;
+      background-color: #f0f0f0;
+    }
+    .map-container {
+      max-width: 393px;
+      height: 852px;
+      margin: auto;
+      background: #ffffff;
+      position: relative;
+      overflow: hidden;
+    }
+    .map-area {
+      height: 489px;
+      position: relative;
+      background-color: #fafcff;
+    }
+    .map-area img {
+      position: absolute;
+      top: 0;
+      left: -76px;
+      width: 555px;
+      height: 489px;
+    }
+    .map-overlays {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+    }
+    .map-line {
+      position: absolute;
+      height: 2px;
+      background-color: red;
+      transform-origin: center;
+    }
+    .map-pin {
+      position: absolute;
+      padding: 6px 10px;
+      border-radius: 20px;
+      background: #fcfeff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .map-pin.active {
+      background: black;
+      color: white;
+    }
+    .locations-panel {
+      position: absolute;
+      top: 489px;
+      width: 100%;
+      height: 363px;
+      background: #d9d9d9;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .location-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .location-item img {
+      width: 60px;
+      height: 60px;
+    }
+    .location-name {
+      flex: 1;
+      font-size: 15px;
+    }
+    .location-number {
+      font-weight: bold;
+      width: 20px;
+    }
+
+    /* 🔙 뒤로가기 버튼 스타일 */
+    .back-arrow {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #0059ff;
+      text-decoration: none;
+      background-color: white;
+      border: 1.5px solid #0059ff;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="map-container">
+    <div class="map-area">
+      <img src="images/map.png" alt="지도 배경">
+      <div class="map-overlays">
+        <!-- 🔙 뒤로가기 버튼 -->
+        <a href="justgochat.html" class="back-arrow" aria-label="뒤로가기">&larr;</a>
+      </div>
+    </div>
+    <div class="locations-panel">
+      <div class="locations-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const data = JSON.parse(localStorage.getItem("selectedItinerary"));
+    if (!data) {
+      alert("일정을 먼저 선택해주세요!");
+      location.href = "justgochat.html";
+    }
+
+    const overlay = document.querySelector(".map-overlays");
+    const list = document.querySelector(".locations-list");
+
+    // 🔴 선(line) 렌더링
+    data.lines.forEach(line => {
+      const el = document.createElement("div");
+      el.className = "map-line";
+      el.style.top = `${line.top}px`;
+      el.style.left = `${line.left}px`;
+      el.style.width = `${line.width}px`;
+      el.style.transform = `rotate(${line.rotate}deg)`;
+      overlay.appendChild(el);
+    });
+
+    // 📍 핀 렌더링
+    data.pins.forEach((pin, i) => {
+      const el = document.createElement("div");
+      el.className = "map-pin" + (i === 0 ? " active" : "");
+      el.style.top = `${pin.top}px`;
+      el.style.left = `${pin.left}px`;
+      el.dataset.index = i;
+      el.innerText = pin.name;
+      overlay.appendChild(el);
+    });
+
+    // 📝 리스트 렌더링
+    data.pins.forEach((pin, i) => {
+      const li = document.createElement("div");
+      li.className = "location-item";
+      li.innerHTML = `
+        <span class="location-number">${i + 1}</span>
+        <img src="${data.thumbnails[i]}" alt="썸네일">
+        <span class="location-name">${pin.name}</span>
+      `;
+      list.appendChild(li);
+    });
+
+    // 📌 핀 클릭 시 리스트 스크롤 이동
+    document.querySelectorAll('.map-pin').forEach((pin) => {
+      pin.addEventListener("click", () => {
+        const i = parseInt(pin.dataset.index);
+        const target = document.querySelectorAll(".location-item")[i];
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    });
+  </script>
+</body>
+</html>
+
+

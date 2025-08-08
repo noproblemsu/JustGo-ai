@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>여행지 선택</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Istok Web', sans-serif;
+      background-color: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      color: #000000;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    /* ===== 공통 ===== */
+    .container {
+      background-color: #ffffff;
+      width: 100%;
+      max-width: 393px;
+      min-height: 852px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 72px 16px 43px;
+    }
+
+    .title {
+      font-family: 'Istok Web', sans-serif;
+      font-weight: 700;
+      font-size: 30px;
+      line-height: 1.44;
+      color: #000000;
+      margin: 0;
+      text-align: left;
+    }
+
+    /* ===== 여행지 선택 섹션 ===== */
+    #main-section {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    #main-section .page-header {
+      flex-shrink: 0;
+    }
+
+    #main-section .content {
+      margin-top: 46px;
+      flex-grow: 1;
+    }
+
+    #main-section .chip-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 17px 37px;
+    }
+
+    #main-section .chip {
+      background-color: #d9d9d9;
+      border-radius: 40px;
+      color: #000000;
+      font-size: 10px;
+      line-height: 15px;
+      letter-spacing: -0.1px;
+      text-align: center;
+      border: none;
+      padding: 12px 5px;
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    #main-section .chip:hover {
+      background-color: #c4c4c4;
+    }
+
+    #main-section .chip:focus,
+    #main-section .chip.active {
+      background-color: #0059ff;
+      color: #ffffff;
+      outline: none;
+    }
+
+    #main-section .page-footer {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+      margin-bottom: 72px;
+    }
+
+    #main-section .btn-primary {
+      background-color: #0059ff;
+      border-radius: 8px;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 18px;
+      height: 55px;
+      width: 100%;
+      border: none;
+      cursor: pointer;
+    }
+
+    #main-section .btn-primary:hover {
+      background-color: #0045c7;
+    }
+
+    #main-section .skip-link {
+      font-size: 12px;
+      margin-top: 12px;
+    }
+
+    /* ===== 직접 입력 섹션 ===== */
+    #destination-screen {
+      width: 100%;
+      display: none; /* 처음엔 숨김 */
+      justify-content: center;
+    }
+    .input-real {
+  width: 100%;
+  height: 55px;
+  margin-top: 48px;
+  border-radius: 8px;
+  border: none;
+  background-color: #d9d9d9;
+  padding: 0 12px;
+  font-size: 16px;
+  outline: none;
+}
+
+
+    #destination-screen .input-field-placeholder {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin-top: 48px;
+    }
+
+    #destination-screen .actions-footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 72px;
+    }
+
+    #destination-screen .button-complete {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 55px;
+      background-color: #0059ff;
+      border-radius: 8px;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    #destination-screen .link-skip {
+      font-size: 12px;
+      color: #000000;
+      text-align: center;
+    }
+    
+
+    /* ===== 반응형 ===== */
+    @media (max-width: 393px) {
+      body {
+        align-items: flex-start;
+        background-color: #ffffff;
+      }
+      .container {
+        min-height: 100vh;
+        padding-top: 76px;
+        padding-bottom: 39px;
+      }
+      #main-section .chip-grid {
+        gap: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 여행지 선택 화면 -->
+  <section id="main-section">
+    <div class="container">
+      <header class="page-header">
+        <h1 class="title">어디로 떠나시요?</h1>
+      </header>
+      <main class="content">
+        <div class="chip-grid">
+          <button type="button" class="chip">강릉</button>
+          <button type="button" class="chip">경주</button>
+          <button type="button" class="chip">광주</button>
+          <button type="button" class="chip">대구</button>
+          <button type="button" class="chip">대전</button>
+          <button type="button" class="chip">부산</button>
+          <button type="button" class="chip">서울</button>
+          <button type="button" class="chip">속초</button>
+          <button type="button" class="chip">여수</button>
+          <button type="button" class="chip">울산</button>
+          <button type="button" class="chip">인천</button>
+          <button type="button" class="chip">전주</button>
+          <button type="button" class="chip">제주도</button>
+          <button type="button" class="chip" id="custom-input-btn">직접 입력</button>
+        </div>
+      </main>
+      <footer class="page-footer">
+        <button type="button" class="btn-primary" id="submit-btn">완료</button>
+        <a href="#" class="skip-link">다음에 하기</a>
+      </footer>
+    </div>
+  </section>
+
+  <!-- 직접 입력 화면 -->
+  <section id="destination-screen">
+    <div class="container">
+      <header class="content-header">
+        <h1 class="title">어디로 떠나시요?</h1>
+        <input type="text" placeholder="여행지를 입력하세요" class="input-real" />
+
+      </header>
+      <footer class="actions-footer">
+        <a href="#" class="button-complete">완료</a>
+        <a href="#" class="link-skip">다음에 하기</a>
+      </footer>
+    </div>
+  </section>
+
+  
+
+  <!-- JS -->
+<script>
+  const chips = document.querySelectorAll("#main-section .chip");
+  let selectedDestination = null;
+
+  // 여행지 버튼 클릭
+  chips.forEach(chip => {
+    chip.addEventListener("click", () => {
+      chips.forEach(c => c.classList.remove("active"));
+
+      if (selectedDestination === chip.textContent.trim()) {
+        selectedDestination = null;
+      } else {
+        chip.classList.add("active");
+        selectedDestination = chip.textContent.trim();
+      }
+
+      if (chip.id === "custom-input-btn") {
+        document.getElementById("main-section").style.display = "none";
+        document.getElementById("destination-screen").style.display = "flex";
+      }
+    });
+  });
+
+  // ✅ 직접 입력 완료 버튼 클릭 시
+  document.querySelector(".button-complete").addEventListener("click", () => {
+    const inputValue = document.querySelector(".input-real").value.trim();
+
+    if (inputValue === "") {
+      alert("여행지를 입력해주세요.");
+      return;
+    }
+
+    selectedDestination = inputValue;
+    localStorage.setItem("selectedLocation", selectedDestination);
+    location.href = "justgocalendar.html";
+  });
+
+  // ✅ 완료 버튼 클릭 (선택된 칩 기준)
+  document.getElementById("submit-btn").addEventListener("click", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromPage = urlParams.get("from");
+
+    if (selectedDestination) {
+      localStorage.setItem("selectedLocation", selectedDestination);
+
+      if (fromPage === "justgoset.html") {
+        location.href = "justgoset.html";
+      } else {
+        location.href = "justgocalendar.html";
+      }
+
+    } else {
+      alert("여행지를 선택해주세요.");
+    }
+  });
+
+  // ✅ skip 버튼
+document.querySelector("#main-section .skip-link").addEventListener("click", handleSkip);
+document.querySelector("#destination-screen .link-skip").addEventListener("click", handleSkip);
+
+
+  function handleSkip() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromPage = urlParams.get("from");
+
+  localStorage.removeItem("selectedLocation");
+  localStorage.removeItem("selectedDates");
+  localStorage.removeItem("selectedCompanions");
+  localStorage.removeItem("hasPet");
+  localStorage.removeItem("selectedStyles");
+  localStorage.setItem("skipRecommendation", "true");
+
+  if (fromPage === "justgoset.html") {
+    location.href = "justgoset.html";
+  } else {
+    location.href = "justgocalendar.html";
+  }
+}
+
+</script>
+
+
+
+</body>
+</html>

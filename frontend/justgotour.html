@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>관광지 추천</title>
+  <style>
+    :root {
+      --text-primary: #000;
+      --text-secondary: rgba(0, 0, 0, 0.5);
+      --text-subtle: #828282;
+      --text-white: #fff;
+      --bg-main: #fff;
+      --bg-light-gray: #f5f5f5;
+      --border-color: #e6e6e6;
+      --primary-blue: #0059ff;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', 'Istok Web', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .page-container {
+      max-width: 393px;
+      margin: 0 auto;
+      padding: 40px 16px 180px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .main-title {
+      font-weight: 700;
+      font-size: 30px;
+      line-height: 1.44;
+      margin: 0;
+    }
+
+    .search-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: static;
+      top: 0;
+      background-color: white;
+      z-index: 1;
+    }
+    .fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  z-index: 100;
+  max-width: 393px;
+  margin: 0 auto;
+  padding: 50px 16px 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.listings-scroll-wrapper {
+  margin-top: 220px; /* 헤더 높이만큼 아래로 밀기 */
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.select-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.sort-select {
+  font-size: 13px;               /* ✅ 텍스트 조금 작게 */
+  padding: 6px 30px 6px 12px;    /* ✅ 오른쪽은 화살표 여백, 왼쪽은 글씨 여백 */
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  appearance: none;
+  background-color: white;
+  background-repeat: no-repeat;
+  background-position: right 10px center; /* ✅ 화살표 위치 조정 */
+  background-size: 12px;
+  text-align: left;             /* ✅ 왼쪽 정렬로 자연스러운 배치 */
+  width: 120px;                 /* ✅ 네모 박스 조금 더 작게 */
+}
+
+
+/* 화살표 이미지 */
+.select-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+}
+
+
+    .search-summary {
+      background-color: var(--bg-light-gray);
+      border-radius: 12px;
+      padding: 8px 12px;
+      margin-top: 12px;
+    }
+
+    .search-title {
+      font-weight: 500;
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .search-tags {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-subtle);
+    }
+
+    .dot {
+      width: 3px;
+      height: 3px;
+      background-color: #999;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .filter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .filter-controls {
+      display: flex;
+      align-items: center;
+    }
+
+   
+
+    .result-count {
+      font-size: 14px;
+    }
+
+    .listings-container {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-height: calc(100vh - 300px);
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .location-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .image-carousel {
+      border-radius: 8px;
+      overflow: hidden;
+      height: 150px;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .pagination-dots {
+      width: 45px;
+      height: 5px;
+      margin-top: -16px;
+    }
+
+    .location-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .location-name {
+      font-weight: 500;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .meta-info {
+      display: flex;
+      gap: 16px;
+    }
+
+    .rating {
+      display: flex;
+      gap: 4px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .price-cta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .price-amount {
+      font-weight: 500;
+      font-size: 20px;
+    }
+
+    .price-unit {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .select-btn {
+      background-color: var(--text-primary);
+      color: var(--text-white);
+      border-radius: 8px;
+      padding: 6px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .select-btn.selected {
+      background-color: var(--primary-blue);
+    }
+
+    .sticky-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      z-index: 10;
+    }
+
+    .footer-content {
+      max-width: 393px;
+      margin: 0 auto;
+      padding: 12px 16px 37px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .main-cta-btn {
+      width: 100%;
+      background-color: var(--primary-blue);
+      color: var(--text-white);
+      font-weight: 700;
+      font-size: 18px;
+      padding: 14.5px 24px;
+      border-radius: 8px;
+      border: none; /* ✅ 테두리 제거 */
+    }
+
+    .skip-link {
+      font-size: 12px;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+    
+  </style>
+</head>
+<body>
+ 
+
+  <main class="page-container">
+ <div id="location-warning" style="display:none; padding: 16px; background-color: #fff3f3; border: 1px solid #ffcccc; border-radius: 8px; text-align: center; color: #cc0000;">
+  <p style="margin: 0 0 8px;">⚠️ 여행지를 먼저 선택해주세요.</p>
+  <button id="go-select-location" style="padding: 8px 16px; background-color: #0059ff; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;">
+    여행지 선택하러 가기
+  </button>
+</div>
+>
+  
+  <div class="fixed-header">
+    <h1 class="main-title">원하는 관광지를<br>선택해주세요.</h1>
+    <div class="search-summary">
+      <p class="search-title">관광지 추천</p>
+      <div class="search-tags"></div>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-controls">
+  <div class="select-wrapper">
+    <select class="sort-select">
+      <option value="review">리뷰 많은 순</option>
+      <option value="rating">별점 높은 순</option>
+    </select>
+    <span class="select-arrow"></span>
+  </div>
+</div>
+
+      <p class="result-count">결과 0개</p>
+    </div>
+  </div>
+
+  <div class="listings-scroll-wrapper">
+    <section class="listings-container">
+      <!-- 관광지 카드 -->
+    </section>
+  </div>
+</main>
+
+
+  <footer class="sticky-footer">
+    <div class="footer-content">
+     <button class="main-cta-btn" onclick="handleComplete()">완료</button>
+
+      <a href="#" class="skip-link">다음에 하기</a>
+    </div>
+  </footer>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+const fromPage = urlParams.get("from");
+
+    let places = [];
+
+    const tagContainer = document.querySelector(".search-tags");
+    const titleElem = document.querySelector(".search-title");
+    const resultCount = document.querySelector(".result-count");
+    const container = document.querySelector(".listings-container");
+    const sortSelect = document.querySelector(".sort-select");
+
+ window.addEventListener('DOMContentLoaded', () => {
+  const skip = localStorage.getItem("skipRecommendation") === "true";
+
+  const warningBox = document.getElementById("location-warning");
+  const fixedHeader = document.querySelector(".fixed-header");
+  const scrollWrapper = document.querySelector(".listings-scroll-wrapper");
+  const footer = document.querySelector("footer");
+
+  const location = localStorage.getItem("selectedLocation");
+
+  if (!location || location === "여행지") {
+    // 🚨 여행지 미입력 → 경고 메시지 표시
+    warningBox.style.display = "block";
+    fixedHeader.style.display = "none";
+    scrollWrapper.style.display = "none";
+    footer.style.display = "none";
+    return;
+  }
+
+  // ✅ 여행지 입력됨 → 기본 UI 표시
+  warningBox.style.display = "none";
+  fixedHeader.style.display = "block";
+  scrollWrapper.style.display = "block";
+  footer.style.display = "block";
+
+  if (skip) {
+    // 👉 다음에 하기 선택한 경우
+    titleElem.innerText = `관광지 추천`;
+    tagContainer.innerHTML = "";
+    resultCount.innerText = "결과 0개";
+    container.innerHTML = "";
+    localStorage.removeItem("skipRecommendation");
+    return;
+  }
+
+  // ✅ 입력 정보 처리
+  const dateRange = JSON.parse(localStorage.getItem("selectedDates") || "[]");
+  let companions = JSON.parse(localStorage.getItem("selectedCompanions") || "[]");
+  const hasPet = localStorage.getItem("hasPet") === "true" ? "반려견 O" : "반려견 X";
+  const styles = JSON.parse(localStorage.getItem("selectedStyles") || "[]");
+
+  titleElem.innerText = `${location} 관광지 추천`;
+
+  const tagParts = [];
+
+  // 날짜 태그
+  if (dateRange.length === 2) {
+    const s = new Date(dateRange[0]);
+    const e = new Date(dateRange[1]);
+    tagParts.push(`${s.getMonth() + 1}월 ${s.getDate()}일 ~ ${e.getMonth() + 1}월 ${e.getDate()}일`);
+  }
+
+  // 동반자
+  companions = companions.filter(c => c !== "반려견과");
+  if (companions.length > 0) {
+    tagParts.push(companions.join(", "));
+  }
+
+  // 반려견
+  tagParts.push(hasPet);
+
+  // 스타일
+  if (styles.length > 0) {
+    tagParts.push(styles.join(", "));
+  }
+
+  // 태그 렌더링
+  if (tagParts.length > 0) {
+    tagContainer.innerHTML = tagParts.map((t, i) => {
+      const dot = i < tagParts.length - 1 ? `<span class="dot"></span>` : "";
+      return `<span>${t}</span>${dot}`;
+    }).join("");
+  } else {
+    tagContainer.innerHTML = ""; // 아무 태그도 없으면 비우기
+  }
+
+  fetchRecommendedPlaces(); // 관광지 카드 렌더링
+});
+
+
+
+document.getElementById("go-select-location").addEventListener("click", () => {
+  // 여행지 선택 페이지로 이동 (예: justgolocation.html)
+  location.href = "justgowhere.html";
+});
+
+
+
+
+   function fetchRecommendedPlaces() {
+  fetch('http://localhost:8000/api/recommend/attractions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      destination: localStorage.getItem("selectedLocation"),
+      dates: JSON.parse(localStorage.getItem("selectedDates") || "[]"),
+      companions: JSON.parse(localStorage.getItem("selectedCompanions") || "[]"),
+      styles: JSON.parse(localStorage.getItem("selectedStyles") || "[]"),
+      hasPet: localStorage.getItem("hasPet") === "true",
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    places = data.places; // 🔄 백엔드에서 받아온 장소 리스트 저장
+    renderPlaceCards();   // 🔁 카드 렌더링 함수 실행
+  })
+  .catch(error => {
+    console.error("관광지 불러오기 실패:", error);
+  });
+}
+
+
+    function renderPlaceCards() {
+      container.innerHTML = "";
+
+      // 정렬
+      const sortType = sortSelect.value;
+      const sorted = [...places];
+      if (sortType === "review") {
+        sorted.sort((a, b) => b.reviewCount - a.reviewCount);
+      } else {
+        sorted.sort((a, b) => b.rating - a.rating);
+      }
+
+      resultCount.innerText = `결과 ${sorted.length}개`;
+
+      sorted.forEach(place => {
+        const card = document.createElement("article");
+        card.className = "location-card";
+        card.innerHTML = `
+          <div class="image-carousel" style="background-image: url('${place.imageUrl}')"></div>
+          <div class="location-info">
+            <p class="location-name">${place.name}</p>
+            <div class="meta-info">
+              <div class="rating">
+                <span>⭐</span>
+                <span>${place.rating} (${place.reviewCount}개)</span>
+              </div>
+            </div>
+            <div class="price-cta">
+              <div>
+                <span class="price-amount">₩${place.price}</span>
+                <span class="price-unit">/1인</span>
+              </div>
+              <button class="select-btn">선택</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      document.querySelectorAll(".select-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          btn.classList.toggle("selected");
+          btn.textContent = btn.classList.contains("selected") ? "선택됨" : "선택";
+        });
+      });
+    }
+    document.querySelector(".skip-link").addEventListener("click", () => {
+  localStorage.setItem("skipRecommendation", "true"); // 🚨 다음 페이지에서 참고할 플래그
+  location.href = "justgorecommend.html"; // 추천 화면 경로
+});
+
+
+    // 정렬 선택 변경 시 다시 렌더링
+    sortSelect.addEventListener("change", renderPlaceCards);
+    // "다음에 하기" 버튼 (선택화면)
+document.querySelector("#main-section .skip-link").addEventListener("click", () => {
+  localStorage.removeItem("selectedLocation");
+  localStorage.removeItem("selectedDates");
+  localStorage.removeItem("selectedCompanions");
+  localStorage.removeItem("hasPet");
+  localStorage.removeItem("selectedStyles");
+  localStorage.setItem("skipRecommendation", "true");
+  location.href = "justgocalendar.html";
+});
+
+// "다음에 하기" 버튼 (직접입력화면)
+document.querySelector("#destination-screen .link-skip").addEventListener("click", () => {
+  localStorage.removeItem("selectedLocation");
+  localStorage.removeItem("selectedDates");
+  localStorage.removeItem("selectedCompanions");
+  localStorage.removeItem("hasPet");
+  localStorage.removeItem("selectedStyles");
+  localStorage.setItem("skipRecommendation", "true");
+  location.href = "justgocalendar.html";
+});
+document.getElementById("go-select-location").addEventListener("click", () => {
+  location.href = "justgolocation.html"; // 실제 여행지 선택 페이지 경로로 수정
+});
+window.addEventListener("DOMContentLoaded", () => {
+  const generateBtn = document.getElementById("generate-btn");
+
+  const destination = localStorage.getItem("selectedLocation");
+  const dates = JSON.parse(localStorage.getItem("selectedDates") || "[]");
+
+  // 여행지나 날짜가 없으면 버튼 숨김
+  if (!destination || dates.length !== 2) {
+    generateBtn.style.display = "none";
+  } else {
+    generateBtn.style.display = "block";
+  }
+});
+function handleComplete() {
+  // 1. 선택된 관광지 목록 수집
+  const selectedPlaces = [];
+  document.querySelectorAll(".location-card").forEach(card => {
+    const selectBtn = card.querySelector(".select-btn");
+    if (selectBtn.classList.contains("selected")) {
+      const placeName = card.querySelector(".location-name").textContent;
+      selectedPlaces.push(placeName);
+    }
+  });
+
+  // 2. localStorage에 저장
+  localStorage.setItem("selectedAttractions", JSON.stringify(selectedPlaces));
+
+  // 3. 페이지 이동
+  const fromPage = new URLSearchParams(window.location.search).get("from");
+  if (fromPage === "justgoset.html") {
+    location.href = "justgoset.html";
+  } else {
+    location.href = "justgofood.html";
+  }
+}
+
+document.querySelector(".skip-link").addEventListener("click", () => {
+  localStorage.setItem("skipRecommendation", "true");
+  const fromPage = new URLSearchParams(window.location.search).get("from");
+
+  if (fromPage === "justgoset.html") {
+    location.href = "justgoset.html";
+  } else {
+    location.href = "justgofood.html";
+  }
+});
+
+
+  </script>
+</body>
+</html>

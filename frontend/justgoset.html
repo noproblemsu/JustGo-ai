@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>여행 설정</title>
+  <style>
+    body {
+      margin: 0 auto;
+      max-width: 390px;
+      min-height: 100vh;
+      background-color: #ffffff;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    /* header */
+    .app-header {
+      background-color: #0059ff;
+      height: 66px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 11px 16px;
+      flex-shrink: 0;
+    }
+
+    .home-icon {
+      width: 30px;
+      height: 30px;
+      display: block;
+    }
+
+    /* main */
+    .settings-main {
+      flex-grow: 1;
+      padding: 0 35px;
+      display: flex;
+     flex-direction: column;
+    }
+
+    .settings-title {
+      color: #000000;
+      font-family: 'Istok Web', sans-serif;
+      font-weight: 700;
+      font-size: 30px;
+      line-height: 1.44;
+      margin: 62px 0 87px 0;
+    }
+
+    .settings-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .settings-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 0;
+      border-bottom: 1px solid #a9a9a9;
+      cursor: pointer;
+    }
+
+    .settings-label {
+      font-size: 20px;
+      color: #000;
+    }
+
+    .settings-value {
+      font-size: 16px;
+      color: #3b5bfe;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+      min-width: 0;
+      flex-grow: 1;
+      text-align: right;
+    }
+
+    .settings-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-grow: 1;
+      min-width: 0;
+      justify-content: space-between;
+    }
+
+    .settings-arrow {
+      font-size: 20px;
+      color: #a9a9a9;
+      font-weight: bold;
+    }
+
+    /* footer */
+    .app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 390px;
+  margin: 0 auto;
+  padding: 20px 14px 32px;
+  background-color: white;
+  z-index: 100;
+}
+
+    .cta-button {
+      width: 100%;
+      height: 55px;
+      background-color: #0059ff;
+      border-radius: 8px;
+      border: none;
+      color: #ffffff;
+      font-family: 'Istok Web', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      line-height: 1.44;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <section id="section-header">
+    <header class="app-header">
+      <a href="index.html" aria-label="Home">
+  <img src="https://img.icons8.com/ios-filled/50/ffffff/home.png" alt="Home Icon" class="home-icon">
+</a>
+    </header>
+  </section>
+
+  <section id="section-main">
+    <main class="settings-main">
+      <h1 class="settings-title">이번 여행 설정</h1>
+      <nav class="settings-nav" aria-label="Trip Settings">
+        <ul class="settings-list">
+
+          <li class="settings-item">
+            <a href="justgowhere.html?from=justgoset.html" class="settings-left">
+              <span class="settings-label">여행지</span>
+              <span class="settings-value" id="destination-value"></span>
+              <span class="settings-arrow">&gt;</span>
+            </a>
+          </li>
+
+          <li class="settings-item">
+            <a href="justgocalendar.html?from=justgoset.html" class="settings-left">
+              <span class="settings-label">날짜</span>
+              <span class="settings-value" id="date-value"></span>
+              <span class="settings-arrow">&gt;</span>
+            </a>
+          </li>
+
+          <li class="settings-item">
+            <a href="justgomoney.html?from=justgoset.html" class="settings-left">
+              <span class="settings-label">예산</span>
+              <span class="settings-value" id="budget-value"></span>
+              <span class="settings-arrow">&gt;</span>
+            </a>
+          </li>
+
+          <li class="settings-item">
+            <a href="justgostyle.html?from=justgoset.html" class="settings-left">
+              <span class="settings-label">여행 스타일</span>
+              <span class="settings-value" id="style-value"></span>
+              <span class="settings-arrow">&gt;</span>
+            </a>
+          </li>
+
+          <li class="settings-item">
+            <a href="justgotour.html?from=justgoset.html" class="settings-left">
+              <span class="settings-label">방문 원하는 관광지</span>
+              <span class="settings-value" id="attractions-value"></span>
+              <span class="settings-arrow">&gt;</span>
+            </a>
+          </li>
+
+          <li class="settings-item">
+            <a href="justgorestaurant.html?from=justgoset.html" class="settings-left">
+              <span class="settings-label">방문 원하는 음식점</span>
+              <span class="settings-value" id="restaurants-value"></span>
+              <span class="settings-arrow">&gt;</span>
+            </a>
+          </li>
+
+        </ul>
+      </nav>
+    </main>
+  </section>
+
+  <section id="section-footer">
+    <footer class="app-footer">
+      <button class="cta-button" id="create-btn">일정 생성하기</button>
+
+      
+    </footer>
+  </section>
+
+  <!-- ✅ JS로 선택값 표시 -->
+  <script>
+    const values = {
+      'destination-value': localStorage.getItem('selectedLocation'),
+      'date-value': (function () {
+        const dates = JSON.parse(localStorage.getItem('selectedDates') || '[]');
+        return dates.length === 2 ? `${dates[0]} ~ ${dates[1]}` : '';
+      })(),
+      'budget-value': (function () {
+        const raw = localStorage.getItem('budget');
+        return raw ? `${Number(raw).toLocaleString()}원` : '';
+      })(),
+      'style-value': (function () {
+        const companions = JSON.parse(localStorage.getItem('selectedCompanions') || '[]');
+        const styles = JSON.parse(localStorage.getItem('selectedStyles') || '[]');
+        const hasPet = localStorage.getItem('hasPet') === 'true' ? ['반려동물 동반'] : [];
+        return [...companions, ...hasPet, ...styles].join(', ');
+      })(),
+      'attractions-value': (function () {
+        const attractions = JSON.parse(localStorage.getItem('selectedAttractions') || '[]');
+        return attractions.join(', ');
+      })(),
+      'restaurants-value': localStorage.getItem('selectedFoodCategory'),
+    };
+
+    for (const [id, value] of Object.entries(values)) {
+      if (value) {
+        document.getElementById(id).textContent = value;
+      }
+    }
+     // ✅ 일정 생성 버튼 클릭 시 페이지 이동
+  document.getElementById("create-btn").addEventListener("click", function () {
+    window.location.href = "justgochat.html";
+  });
+  </script>
+</body>
+</html>
+

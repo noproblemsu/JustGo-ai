@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+<!-- ✅ 이 HTML은 세 줄 메뉴 제거 + 홈버튼으로 교체 완료됨 -->
+>>>>>>> 93867d9 (UI 파일 업로드)
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -40,6 +44,7 @@
     }
 
     .header-content {
+<<<<<<< HEAD
       height: 66px;
       display: flex;
       align-items: center;
@@ -48,10 +53,34 @@
     }
 
     .menu-icon {
+=======
+  height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* 기존 유지 */
+  padding: 0 24px;
+  position: relative; /* ✅ 중앙 정렬 위해 추가 */
+}
+
+.title-placeholder {
+  width: 207px;
+  height: 43px;
+  background-color: var(--bg-translucent-white);
+  border-radius: 4px;
+
+  position: absolute;       /* ✅ 중앙 정렬 핵심 */
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+
+    .home-button {
+>>>>>>> 93867d9 (UI 파일 업로드)
       background: none;
       border: none;
       padding: 0;
       cursor: pointer;
+<<<<<<< HEAD
       width: 33px;
       height: 22px;
       display: flex;
@@ -84,6 +113,13 @@
       font-size: 48px;
       font-weight: 400;
       line-height: 1;
+=======
+    }
+
+    .home-icon {
+      width: 30px;
+      height: 30px;
+>>>>>>> 93867d9 (UI 파일 업로드)
     }
 
     .chat-area {
@@ -185,13 +221,20 @@
       position: absolute;
       bottom: 0;
       left: 0;
+<<<<<<< HEAD
       right: 0;
+=======
+>>>>>>> 93867d9 (UI 파일 업로드)
       background-color: #fff;
       border-top: 1px solid #ddd;
     }
 
     .input-bar-wrapper {
+<<<<<<< HEAD
       padding: 8px 8px 24px 8px;
+=======
+      padding: 8px 8px 24px;
+>>>>>>> 93867d9 (UI 파일 업로드)
     }
 
     .input-bar {
@@ -199,7 +242,11 @@
       background-color: var(--bg-light-gray-2);
       border: 1.5px solid var(--border-blue);
       border-radius: 15px;
+<<<<<<< HEAD
       box-shadow: 2px 4px 4px 0px rgba(0, 0, 0, 0.15);
+=======
+      box-shadow: 2px 4px 4px rgba(0, 0, 0, 0.15);
+>>>>>>> 93867d9 (UI 파일 업로드)
       display: flex;
       align-items: center;
       padding: 6px 12px;
@@ -227,6 +274,7 @@
 </head>
 <body>
   <div class="page-container">
+<<<<<<< HEAD
     <header class="site-header">
       <div class="header-content">
         <button class="menu-icon" aria-label="Menu">
@@ -264,10 +312,47 @@
             - 1일차: 도착 → 시내 구경<br>
             - 2일차: 핫플 순회 + 로컬 식당<br>
             - 3일차: 여행 회고 + 이동
+=======
+    <!-- HEADER -->
+    <header class="site-header">
+      <div class="header-content">
+        <div class="title-placeholder"></div>
+        <button class="home-button" onclick="location.href='index.html'">
+          <img src="https://img.icons8.com/ios-filled/50/ffffff/home.png" alt="Home Icon" class="home-icon">
+        </button>
+      </div>
+    </header>
+
+    <!-- CHAT AREA -->
+    <main class="chat-area">
+      <!-- 일정 추천 -->
+      <section class="schedule-recommendations">
+        <h2 class="schedule-title">추천 일정</h2>
+        <div class="schedule-card">
+          <div class="schedule-summary">🗓️ 일정 추천 1</div>
+          <div class="schedule-detail">
+            - 1일차: 해운대 해수욕장 → 해운대 시장<br>
+            - 2일차: 달맞이 고개 → 광안대교 전망대
+          </div>
+        </div>
+        <div class="schedule-card">
+          <div class="schedule-summary">🗓️ 일정 추천 2</div>
+          <div class="schedule-detail">
+            - 1일차: 송정 해변 → 이기대 해안산책로<br>
+            - 2일차: 카페거리 → 영도다리
+          </div>
+        </div>
+        <div class="schedule-card">
+          <div class="schedule-summary">🗓️ 일정 추천 3</div>
+          <div class="schedule-detail">
+            - 1일차: 서면 → 전포 카페거리<br>
+            - 2일차: 국제시장 → 자갈치시장
+>>>>>>> 93867d9 (UI 파일 업로드)
           </div>
         </div>
       </section>
 
+<<<<<<< HEAD
       <div class="chat-history">
         <div class="message bot-message">
           <img src="images/bot.svg" alt="Bot avatar" class="avatar">
@@ -275,11 +360,25 @@
             입력된 정보를 바탕으로 일정을 생성했어요!<br>
             클릭을 하면 일정을 자세히 볼 수 있어요.<br>
             추가로 요청사항이 있으면 말씀해주세요 :)
+=======
+      <!-- GPT 메시지 -->
+      <div class="chat-history">
+        <div class="message bot-message">
+          <img src="images/bot.svg" alt="GPT" class="avatar">
+          <div class="bubble bot">
+            입력된 정보를 바탕으로 일정을 생성했어요!<br>
+            일정을 한 번 클릭하면 상세 내용을 볼 수 있고,<br>
+            다시 클릭하면 지도 페이지로 이동합니다.
+>>>>>>> 93867d9 (UI 파일 업로드)
           </div>
         </div>
       </div>
     </main>
 
+<<<<<<< HEAD
+=======
+    <!-- FOOTER -->
+>>>>>>> 93867d9 (UI 파일 업로드)
     <footer class="chat-footer">
       <div class="input-bar-wrapper">
         <form class="input-bar" id="chat-form">
@@ -290,11 +389,89 @@
     </footer>
   </div>
 
+<<<<<<< HEAD
   <script>
     function toggleDetail(card) {
       card.classList.toggle("expanded");
     }
 
+=======
+  <!-- SCRIPT -->
+  <script>
+    // 예시 일정 데이터
+    const itineraries = {
+      1: {
+        pins: [
+          { name: "해운대 해수욕장", top: 225, left: 160 },
+          { name: "해운대 시장", top: 259, left: 37 },
+          { name: "달맞이 고개", top: 142, left: 159 },
+          { name: "광안대교 전망대", top: 293, left: 258 }
+        ],
+        lines: [
+          { top: 169, left: 80, width: 79, rotate: 131.28 },
+          { top: 162, left: 221, width: 62, rotate: -111.43 },
+          { top: 244, left: 104, width: 56, rotate: 155.94 }
+        ],
+        thumbnails: [
+          "images/loc1.svg", "images/loc2.svg", "images/loc3.svg", "images/loc4.svg"
+        ]
+      },
+      2: {
+        pins: [
+          { name: "송정 해변", top: 200, left: 150 },
+          { name: "이기대 해안산책로", top: 250, left: 50 },
+          { name: "카페거리", top: 120, left: 180 },
+          { name: "영도다리", top: 290, left: 230 }
+        ],
+        lines: [
+          { top: 150, left: 100, width: 60, rotate: 110 },
+          { top: 200, left: 180, width: 80, rotate: -90 },
+          { top: 260, left: 90, width: 70, rotate: 160 }
+        ],
+        thumbnails: [
+          "images/loc5.svg", "images/loc6.svg", "images/loc7.svg", "images/loc8.svg"
+        ]
+      },
+      3: {
+        pins: [
+          { name: "서면", top: 220, left: 120 },
+          { name: "전포 카페거리", top: 170, left: 200 },
+          { name: "국제시장", top: 260, left: 70 },
+          { name: "자갈치시장", top: 300, left: 250 }
+        ],
+        lines: [
+          { top: 180, left: 110, width: 70, rotate: 135 },
+          { top: 230, left: 170, width: 65, rotate: -100 },
+          { top: 270, left: 90, width: 60, rotate: 150 }
+        ],
+        thumbnails: [
+          "images/loc9.svg", "images/loc10.svg", "images/loc11.svg", "images/loc12.svg"
+        ]
+      }
+    };
+
+    // 카드 클릭 이벤트: 첫 클릭은 확장, 두 번째 클릭은 이동
+    document.querySelectorAll(".schedule-card").forEach((card, idx) => {
+      card.dataset.expanded = "false";
+
+      card.addEventListener("click", () => {
+        const isExpanded = card.dataset.expanded === "true";
+
+        if (!isExpanded) {
+          card.classList.add("expanded");
+          card.dataset.expanded = "true";
+        } else {
+          const itinerary = itineraries[idx + 1];
+          if (itinerary) {
+            localStorage.setItem("selectedItinerary", JSON.stringify(itinerary));
+            window.location.href = "justgomap.html";
+          }
+        }
+      });
+    });
+
+    // 채팅 입력 처리
+>>>>>>> 93867d9 (UI 파일 업로드)
     const form = document.getElementById("chat-form");
     const input = document.getElementById("chat-input");
     const chatHistory = document.querySelector(".chat-history");
@@ -304,6 +481,7 @@
       const text = input.value.trim();
       if (text === "") return;
 
+<<<<<<< HEAD
       const userMessage = document.createElement("div");
       userMessage.className = "message user-message";
       userMessage.innerHTML = `<div class="bubble user">${text}</div>`;
@@ -316,6 +494,19 @@
         <div class="bubble bot">\"${text}\"에 대해 일정을 생성해볼게요!</div>
       `;
       chatHistory.appendChild(botMessage);
+=======
+      const userMsg = document.createElement("div");
+      userMsg.className = "message user-message";
+      userMsg.innerHTML = `<div class="bubble user">${text}</div>`;
+      chatHistory.appendChild(userMsg);
+
+      const botMsg = document.createElement("div");
+      botMsg.className = "message bot-message";
+      botMsg.innerHTML = `
+        <img src="images/bot.svg" alt="Bot avatar" class="avatar">
+        <div class="bubble bot">"${text}"에 대해 일정을 추천해볼게요!</div>`;
+      chatHistory.appendChild(botMsg);
+>>>>>>> 93867d9 (UI 파일 업로드)
 
       input.value = "";
       chatHistory.scrollTop = chatHistory.scrollHeight;
@@ -323,3 +514,11 @@
   </script>
 </body>
 </html>
+<<<<<<< HEAD
+=======
+
+
+
+
+
+>>>>>>> 93867d9 (UI 파일 업로드)

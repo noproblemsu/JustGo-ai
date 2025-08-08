@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>JUSTGO Splash</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: #0059ff;
+      font-family: 'Istok Web', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .splash-screen {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #0059ff;
+    }
+
+    .brand-logo {
+      color: #ffffff;
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      text-align: center;
+      opacity: 0;
+      animation: fadeIn 1.5s ease-in-out forwards;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="splash-screen">
+    <h1 class="brand-logo">JUSTGO</h1>
+  </section>
+
+  <script>
+    // 2.5초 후 index.html로 이동
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 2500);
+  </script>
+</body>
+</html>
+
+
+
+
+
