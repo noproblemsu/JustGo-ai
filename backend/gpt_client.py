@@ -1,7 +1,7 @@
 from openai import OpenAI
 from prompts import build_prompt
 
-client = OpenAI(api_key="sk-proj-IleCW...")  # 그대로 유지
+client = OpenAI(api_key="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")  # 그대로 유지
 
 def generate_schedule_gpt(location, days, style, companions, budget, selected_places, travel_date, count=3):
     # ✅ 일정 3개를 한 번에 생성하는 프롬프트
