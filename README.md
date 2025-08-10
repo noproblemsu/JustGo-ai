@@ -45,9 +45,6 @@
 ## 🗺 JustGo 서비스 흐름
 ![JustGo 서비스 흐름](docs/images/justgo_service_flow_dark_v13_readme.png)
 
-## 🗺 JustGo 서비스 흐름
-![JustGo 서비스 흐름](docs/images/justgo_service_flow_dark_v13_readme.png)
-
 # 1. 저장소 클론
 git clone https://github.com/사용자명/저장소명.git
 cd 저장소명
