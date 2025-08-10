@@ -70,4 +70,56 @@ http://localhost:8000
 
 원하면 제가 **UI 캡처 어떻게 찍고 GIF 만드는 방법**까지 알려줄까요?  
 그렇게 하면 완성본 바로 만들 수 있습니다.
+# ✈ JustGo
+
+## 1. 프로젝트 소개
+JustGo는 여행지·날짜·예산·동반자·스타일 정보를 입력하면 GPT와 네이버 API를 활용해 **맞춤형 관광지/맛집 추천**과 **대화형 일정 조율**을 제공하는 여행 계획 서비스입니다.  
+사용자는 챗봇과 대화를 통해 일정을 조율하고, 지도에서 동선을 확인·조정하며, PDF로 여행 계획을 내보낼 수 있습니다.
+
+---
+
+## 2. 주요 기능
+- **여행 정보 입력** → 입력된 여행지, 날짜, 예산, 동반자, 여행 스타일을 반영하여 관광지/맛집 추천
+- **일정 생성 (챗봇)** → 추천된 장소 기반으로 맞춤형 일정 생성, 타임테이블·지도·동선 자동 생성
+- **대화형 일정 조율 (GPT)** → 실시간으로 일정 수정, 장소 추가/삭제, 순서 변경
+- **PDF 일정 내보내기** → 생성된 일정을 PDF 파일로 저장
+- **모바일 친화 UI** → 모바일 화면에서도 최적화된 인터페이스 제공
+
+---
+
+## 🗺 서비스 흐름
+![JustGo 서비스 흐름](docs/images/justgo_service_flow_dark_v13_readme.png)
+
+---
+
+## 3. UI 스크린샷
+| 메인 페이지 | 챗봇 일정 생성 | 지도 보기 |
+|-------------|--------------|-----------|
+| ![메인](docs/images/main.png) | ![챗봇](docs/images/chat.png) | ![지도](docs/images/map.png) |
+
+---
+
+## 4. 기술 스택
+**Frontend**: HTML5, CSS3, JavaScript, Figma  
+**Backend**: Python 3.x, FastAPI, OpenAI API, Naver Place API  
+**기타**: Streamlit, GitHub
+
+---
+
+## 5. 설치 및 실행 방법
+```bash
+# 1. 저장소 클론
+git clone https://github.com/사용자명/JustGo.git
+cd JustGo
+
+# 2. 가상환경 생성 및 활성화
+python -m venv venv
+venv\Scripts\activate   # (Windows)
+source venv/bin/activate  # (Mac/Linux)
+
+# 3. 의존성 설치
+pip install -r requirements.txt
+
+# 4. 서버 실행
+uvicorn backend.main:app --reload
 
