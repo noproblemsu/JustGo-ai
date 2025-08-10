@@ -1,16 +1,46 @@
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
+from typing import List, Union
 
-def build_prompt(location, days, budget, companions, style, selected_places, travel_date, count=3):
-    companion_str = ', '.join(companions) if companions else "없음"
-    selected_str = '\n'.join([f"- {place.strip()}" for place in selected_places if place.strip()]) or "없음"
+def build_prompt(
+    location: str,
+    days: Union[int, str],
+    budget: Union[int, str],
+    companions: Union[List[str], str, None],
+    style: str,
+    selected_places: Union[List[str], None],
+    travel_date: Union[str, date, datetime],
+    count: int = 3,
+) -> str:
+    # ---- 입력값 정리 ----
+    days = int(days)
+    budget = int(budget)
 
+    if companions is None:
+        companions = []
+    elif isinstance(companions, str):
+        companions = [companions]
+    companion_str = ", ".join([c for c in companions if str(c).strip()]) or "없음"
+
+    selected_places = selected_places or []
+    selected_str = "\n".join(
+        [f"- {str(place).strip()}" for place in selected_places if str(place).strip()]
+    ) or "없음"
+
+    # travel_date -> datetime으로 보정
     if isinstance(travel_date, str):
-        start_date = datetime.strptime(travel_date, "%Y-%m-%d")
+        # 입력 포맷: 2025-08-10
+        start_dt = datetime.strptime(travel_date.strip(), "%Y-%m-%d")
+    elif isinstance(travel_date, date) and not isinstance(travel_date, datetime):
+        start_dt = datetime.combine(travel_date, datetime.min.time())
     else:
-        start_date = travel_date
+        start_dt = travel_date  # 이미 datetime
+    if not isinstance(start_dt, datetime):
+        # 혹시 다른 타입이 들어오면 예외 대신 오늘 날짜로 안전 처리(원하면 제거 가능)
+        start_dt = datetime.today()
 
-    date_list = [(start_date + timedelta(days=i)).strftime("%Y-%m-%d (%a)") for i in range(days)]
-    date_str = '\n'.join([f"- {d}" for d in date_list])
+    # 날짜 리스트 생성
+    date_list = [(start_dt + timedelta(days=i)).strftime("%Y-%m-%d (%a)") for i in range(days)]
+    date_str = "\n".join([f"- {d}" for d in date_list])
 
     return f"""
 너는 여행 일정 전문 플래너야.
