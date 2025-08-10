@@ -40,3 +40,30 @@
 ---
 
 ## 📂 폴더 구조
+
+# 1. 저장소 클론
+git clone https://github.com/사용자명/저장소명.git
+cd 저장소명
+
+# 2. 라이브러리 설치
+pip install -r requirements.txt
+
+# 3. 서버 실행
+uvicorn main:app --reload
+
+# 4. 브라우저 접속
+http://localhost:8000
+
+
+---
+
+💡 이렇게 하면  
+- **Mermaid 다이어그램**으로 서비스 흐름 시각화  
+- **사진 & GIF**로 기능이 직관적으로 보임  
+- 핵심 기능이 순서대로 정리  
+
+지금 이미지랑 GIF만 준비하면 바로 README에 적용 가능합니다.  
+
+원하면 제가 **UI 캡처 어떻게 찍고 GIF 만드는 방법**까지 알려줄까요?  
+그렇게 하면 완성본 바로 만들 수 있습니다.
+
