@@ -1,6 +1,16 @@
 
 # JustGo ✈️
 
+[![GitHub stars](https://img.shields.io/github/stars/사용자명/저장소명?style=social)](https://github.com/사용자명/저장소명/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/사용자명/저장소명?style=social)](https://github.com/사용자명/저장소명/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/사용자명/저장소명)](https://github.com/사용자명/저장소명/issues)
+[![GitHub last commit](https://img.shields.io/github/last-commit/사용자명/저장소명)](https://github.com/사용자명/저장소명/commits/main)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](/LICENSE)
+![Made with Python](https://img.shields.io/badge/Made%20with-Python-blue)
+![Frontend](https://img.shields.io/badge/Frontend-HTML%20%7C%20CSS%20%7C%20JS-yellow)
+![OpenAI API](https://img.shields.io/badge/API-OpenAI%20GPT-blue)
+![Naver API](https://img.shields.io/badge/API-Naver%20Place%20Review-green)
+
 **JustGo**는 사용자가 입력한 여행지, 날짜, 예산, 여행 스타일, 동반자 정보를 바탕으로 인공지능이 3개의 맞춤 여행 일정을 생성하고, 사용자가 직접 선택·수정할 수 있는 오픈소스 여행 일정 추천 플랫폼입니다. 단순 추천이 아니라, **네이버 지도 리뷰 연동**으로 실시간 리뷰를 확인하며 검증 가능한 정보를 제공합니다. 모바일 친화적인 UI와 직관적인 챗봇 인터페이스로, 여행 계획 과정을 쉽고 재미있게 만듭니다.
 
 ---
