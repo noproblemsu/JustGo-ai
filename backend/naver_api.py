@@ -1,16 +1,27 @@
+# backend/naver_api.py
 import os
 import math
 import requests
 from typing import List, Dict, Tuple
 from urllib.parse import quote
+from dotenv import load_dotenv
 
-NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
-NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
+# ✅ backend/.env 로드 (키=값 형식)
+#    NAVER_CLIENT_ID=xxxx
+#    NAVER_CLIENT_SECRET=yyyy
+BASE_DIR = os.path.dirname(__file__)
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # ---------- 공통 유틸 ----------
-def _ensure_key():
-    if not NAVER_CLIENT_ID or not NAVER_CLIENT_SECRET:
+def _get_keys() -> Tuple[str, str]:
+    """항상 최신 환경변수를 읽어온다(.env 포함)."""
+    return os.getenv("NAVER_CLIENT_ID"), os.getenv("NAVER_CLIENT_SECRET")
+
+def _ensure_key() -> Tuple[str, str]:
+    cid, sec = _get_keys()
+    if not cid or not sec:
         raise RuntimeError("NAVER_CLIENT_ID / NAVER_CLIENT_SECRET not set")
+    return cid, sec
 
 def naver_map_link(name: str) -> str:
     return f"https://map.naver.com/v5/search/{quote(name)}"
@@ -33,15 +44,15 @@ def _tm128_to_wgs84(x: float, y: float) -> Tuple[float, float]:
 
 # ---------- 지역검색 ----------
 def naver_local_search(query: str, display: int = 20) -> List[Dict]:
-    _ensure_key()
+    cid, sec = _ensure_key()
     url = "https://openapi.naver.com/v1/search/local.json"
     headers = {
-        "X-Naver-Client-Id": NAVER_CLIENT_ID,
-        "X-Naver-Client-Secret": NAVER_CLIENT_SECRET
+        "X-Naver-Client-Id": cid,
+        "X-Naver-Client-Secret": sec
     }
     params = {
         "query": query,
-        "display": max(1, min(display, 45)),
+        "display": max(1, min(display, 45)),  # API 제한
         "start": 1,
         "sort": "random"
     }
@@ -49,7 +60,7 @@ def naver_local_search(query: str, display: int = 20) -> List[Dict]:
     if r.status_code != 200:
         raise RuntimeError(f"Naver API error: {r.status_code} {r.text}")
     data = r.json()
-    items = []
+    items: List[Dict] = []
     for it in data.get("items", []):
         name = (it.get("title") or "").replace("<b>", "").replace("</b>", "")
         addr = it.get("roadAddress") or it.get("address") or ""
@@ -79,13 +90,14 @@ def search_and_rank_places(
     max_distance_km: float = 5.0, display: int = 30
 ) -> List[Dict]:
     results = naver_local_search(keyword, display=display)
-    ranked = []
+    ranked: List[Dict] = []
     for it in results:
         lat, lng = _tm128_to_wgs84(it["mapx"], it["mapy"])
         dist = round(_haversine_km(prev_lat, prev_lng, lat, lng), 2)
         if dist > max_distance_km:
             continue
         name = it["name"]
+        # 간단 적합도: 키워드 토큰이 이름에 모두 있으면 가산
         fit = 1.0 if all(k.strip() in name for k in keyword.split()) else 0.0
         score = 1.0/(1.0+dist) + 0.3*fit  # 거리 우선, 이름 적합도 가산
         ranked.append({
