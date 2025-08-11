@@ -1,6 +1,8 @@
 
-# JustGo ✈️
 
+
+
+# 🌍 JustGo — AI 기반 맞춤 여행 일정 추천 플랫폼
 [![GitHub stars](https://img.shields.io/github/stars/사용자명/저장소명?style=social)](https://github.com/사용자명/저장소명/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/사용자명/저장소명?style=social)](https://github.com/사용자명/저장소명/network/members)
 [![GitHub issues](https://img.shields.io/github/issues/사용자명/저장소명)](https://github.com/사용자명/저장소명/issues)
@@ -10,8 +12,6 @@
 ![Frontend](https://img.shields.io/badge/Frontend-HTML%20%7C%20CSS%20%7C%20JS-yellow)
 ![OpenAI API](https://img.shields.io/badge/API-OpenAI%20GPT-blue)
 ![Naver API](https://img.shields.io/badge/API-Naver%20Place%20Review-green)
-
-# 🌍 JustGo — AI 기반 맞춤 여행 일정 추천 플랫폼
 
 > **여행 계획을 더 쉽고, 똑똑하게**
 >
