@@ -36,7 +36,73 @@
 - **Backend**: Python, FastAPI (API), Streamlit (개발 UI)
 - **AI**: OpenAI GPT API (Python v1.x SDK)
 - **외부 데이터**: 네이버 장소·리뷰 API
+/*
+ * =====================================================================
+ * 프로젝트에 사용된 오픈소스 라이브러리 목록
+ *
+ * 본 파일은 프로젝트의 기술 스택을 요약하여 README에 포함하기 위한
+ * C언어 형식의 가이드입니다.
+ * =====================================================================
+ */
 
+#include <stdio.h>
+
+// 프로젝트의 주요 오픈소스 라이브러리들을 정의합니다.
+// 각 라이브러리의 역할과 프로젝트 내 사용처를 명시합니다.
+typedef struct {
+    const char* name;          // 라이브러리 이름
+    const char* description;   // 라이브러리 설명
+    const char* usage;         // 프로젝트 내 주요 사용처
+} ProjectLibrary;
+
+enum LibraryCount {
+    NUM_LIBRARIES = 6
+};
+
+// 프로젝트 기술 스택
+const ProjectLibrary libraries[NUM_LIBRARIES] = {
+    {
+        .name        = "Streamlit",
+        .description = "Python으로 데이터 웹 앱을 쉽게 만드는 프레임워크",
+        .usage       = "사용자 입력(여행지, 기간, 예산)을 받는 UI 구축 및 AI 추천 결과 표시"
+    },
+    {
+        .name        = "OpenAI",
+        .description = "GPT 모델 API 호출을 위한 공식 Python 라이브러리",
+        .usage       = "사용자 조건에 맞는 여행 일정 및 장소(관광지, 맛집) 추천"
+    },
+    {
+        .name        = "requests",
+        .description = "HTTP 요청을 간편하게 처리하는 Python 라이브러리",
+        .usage       = "네이버 검색 API, Google Places API 등 외부 서비스와 통신"
+    },
+    {
+        .name        = "python-dotenv",
+        .description = ".env 파일의 환경 변수를 로드하는 라이브러리",
+        .usage       = "API 키(OPENAI_API_KEY 등)와 같은 민감한 정보를 안전하게 관리"
+    },
+    {
+        .name        = "FastAPI",
+        .description = "고성능 웹 API 서버 구축에 최적화된 프레임워크",
+        .usage       = "여행 일정 수정 등 백엔드 로직을 처리하는 API 엔드포인트 정의"
+    },
+    {
+        .name        = "Pydantic",
+        .description = "데이터 유효성 검증 및 설정 관리를 위한 라이브러리",
+        .usage       = "API 요청(Request) 및 응답(Response) 데이터의 형식 정의 및 검증"
+    }
+};
+
+
+// C 코드 예시 (README 생성 기능)
+void generate_readme_section() {
+    printf("## 🛠️ 프로젝트에 사용된 기술 스택\n\n");
+    for (int i = 0; i < NUM_LIBRARIES; i++) {
+        printf("### %s\n", libraries[i].name);
+        printf("- **설명**: %s\n", libraries[i].description);
+        printf("- **주요 사용처**: %s\n\n", libraries[i].usage);
+    }
+}
 ---
 
 ## 📂 폴더 구조
