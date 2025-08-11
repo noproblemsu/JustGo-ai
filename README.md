@@ -31,6 +31,8 @@
 * **GPT**와 **네이버 장소/리뷰 API**를 결합하여 추천의 품질과 신뢰도를 동시에 확보합니다.
 * 일정은 생성으로 끝나지 않습니다. **챗봇과의 대화**로 즉시 수정·재구성이 가능합니다.
 
+## 🗺 서비스 흐름
+![JustGo 서비스 흐름](docs/images/justgo_service_flow_dark_v13_readme.png)
 ---
 
 ## 🧵 사용자 여정 & 오픈소스 사용 흐름
@@ -334,8 +336,7 @@ NAVER_CLIENT_SECRET=
 
 
 
-## 🗺 서비스 흐름
-![JustGo 서비스 흐름](docs/images/justgo_service_flow_dark_v13_readme.png)
+
 
 ---
 
