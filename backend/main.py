@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 import re
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from gpt_client import generate_schedule_gpt, client
 from naver_api import search_and_rank_places, search_place  # ✅ 네이버 기반
 
@@ -46,10 +46,41 @@ if "schedule_result" not in st.session_state: st.session_state.schedule_result =
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 if "last_point" not in st.session_state:   st.session_state.last_point = None  # (lat, lng)
 
-# ✅ 비용 합산
-def parse_total_cost(text):
+# ✅ 유틸
+def parse_total_cost(text: str) -> int:
     prices = re.findall(r'약\s*([\d,]+)원', text)
     return sum(int(p.replace(',', '')) for p in prices)
+
+def expected_date_strings(start: date, num_days: int):
+    # "YYYY-MM-DD (Tue)" 형태와 "YYYY-MM-DD" 둘 다 체크
+    dts = [(datetime.combine(start, datetime.min.time()) + timedelta(days=i)) for i in range(num_days)]
+    full = [dt.strftime("%Y-%m-%d (%a)") for dt in dts]
+    short = [dt.strftime("%Y-%m-%d") for dt in dts]
+    return full, short
+
+def block_has_all_dates(block_text: str, full_dates: list[str], short_dates: list[str]) -> bool:
+    return all((fd in block_text) or (sd in block_text) for fd, sd in zip(full_dates, short_dates))
+
+def repair_block_with_missing_dates(block_text: str, missing_dates: list[str]) -> str:
+    """날짜가 누락된 일정 블록을 한 번 더 요청해서 보완."""
+    try:
+        messages = [
+            {"role": "system", "content":
+             "너는 여행 일정 전문가야. 반드시 모든 날짜(아침/점심/저녁 포함)를 작성하고, "
+             "실제 존재하는 상호명과 도로명 주소를 포함하며, 총 예상비용은 마지막에만 1회 작성한다."},
+            {"role": "user", "content":
+             "아래 일정 블록에서 일부 날짜가 누락되었습니다. 누락된 날짜를 포함해서 동일 형식으로 다시 작성하세요.\n\n"
+             f"[누락된 날짜]: {', '.join(missing_dates)}\n\n[기존 블록]\n{block_text}"}
+        ]
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",  # 사용 모델에 맞게 조정
+            messages=messages,
+            temperature=0.3
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        # 실패 시 원문 유지
+        return block_text
 
 # ✅ 일정 생성
 if st.button("일정 추천 받기"):
@@ -59,6 +90,8 @@ if st.button("일정 추천 받기"):
 
     st.success(f"{destination}에서 {start_date}부터 {end_date}까지 '{travel_type}' 여행 일정을 준비 중이에요!")
 
+    full_dates, short_dates = expected_date_strings(start_date, days)
+
     with st.spinner("AI가 여행 일정을 생성 중입니다..."):
         result = generate_schedule_gpt(
             location=destination, days=days, style=travel_type,
@@ -66,6 +99,7 @@ if st.button("일정 추천 받기"):
             selected_places=selected_places, travel_date=str(start_date), count=3
         )
 
+        # 일정 추천 분리
         raw_blocks = re.split(r"(?:---)?\s*일정추천\s*\d+:", result.strip())
         titles = re.findall(r"(일정추천\s*\d+:\s*[^\n]+)", result.strip())
         cleaned_schedules = []
@@ -77,24 +111,31 @@ if st.button("일정 추천 받기"):
             title = titles[i] if i < len(titles) else f"일정추천 {i+1}"
             detail = block.strip()
 
+            # --- 날짜 검증 & 1회 보정 ---
+            if not block_has_all_dates(detail, full_dates, short_dates):
+                missing = [sd for fd, sd in zip(full_dates, short_dates)
+                           if (fd not in detail) and (sd not in detail)]
+                detail = repair_block_with_missing_dates(detail, missing)
+
             # 총비용 문구 제거 후 재계산
             detail = re.sub(r"총 예상 비용.*?원\W*", "", detail)
             cost = parse_total_cost(detail)
             detail += f"\n\n총 예상 비용은 약 {cost:,}원으로, 입력 예산인 {budget:,}원 내에서 잘 계획되었어요."
             cleaned_schedules.append((title, detail))
 
-            # 🔎 첫 일정(추천1)에서 '시간 패턴'이 있는 첫 줄에서 장소 추출
+            # 🔎 첫 일정(추천1)에서 '시간 패턴' 줄에서 장소 추출 → 좌표 저장
             if not first_place_locked and i == 0:
-                # 예: "09:00~10:30 불국사 관람 (약 1시간 30분, 약 3,000원)"
-                for line in block.splitlines():
+                for line in detail.splitlines():
                     m = re.search(r"\b\d{2}:\d{2}\s*~\s*\d{2}:\d{2}\s*([^(]+)", line)
                     if m:
                         query_name = m.group(1).strip()
-                        # 도시명과 함께 검색 → 좌표 저장
                         sp = search_place(f"{destination} {query_name}")
                         if sp and sp.get("lat") and sp.get("lng"):
-                            st.session_state.last_point = (float(sp["lat"]), float(sp["lng"]))
-                            first_place_locked = True
+                            try:
+                                st.session_state.last_point = (float(sp["lat"]), float(sp["lng"]))
+                                first_place_locked = True
+                            except Exception:
+                                pass
                         break
 
         st.session_state.schedule_result = cleaned_schedules
@@ -125,15 +166,15 @@ if st.session_state.schedule_result:
 
         # 🧭 맛집/관광지 요청은 네이버 지역검색 사용 (없는 장소 금지)
         need_place = any(k in user_msg for k in
-            ["맛집","식당","카페","관광지","명소","여행지","점심","저녁","아침","브런치","조식","일식","한식","중식","양식","초밥","라멘","파스타","고기","해산물"]
+            ["맛집","식당","카페","관광지","명소","여행지","점심","저녁","아침","브런치","조식",
+             "일식","한식","중식","양식","초밥","라멘","파스타","고기","해산물"]
         )
         if need_place:
             try:
                 base = st.session_state.last_point
                 if base is None:
-                    # 도시 중심 좌표 추정
-                    sp_city = search_place(destination)  # 시청/대표 스팟으로 들어올 확률 높음
-                    base = (sp_city["lat"], sp_city["lng"]) if sp_city else (37.5665, 126.9780)
+                    sp_city = search_place(destination)  # 도시 대표 지점 시도
+                    base = (float(sp_city["lat"]), float(sp_city["lng"])) if sp_city else (37.5665, 126.9780)
 
                 with st.spinner("네이버에서 주변 후보 검색 중..."):
                     ranked = search_and_rank_places(base[0], base[1], f"{destination} {user_msg}", max_distance_km=5.0)
@@ -156,7 +197,8 @@ if st.session_state.schedule_result:
             try:
                 response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
-                    messages=st.session_state.chat_history
+                    messages=st.session_state.chat_history,
+                    temperature=0.5
                 )
                 ai_msg = response.choices[0].message.content
                 st.markdown(f'<div class="chat-bubble-assistant">{ai_msg}</div>', unsafe_allow_html=True)
