@@ -1,9 +1,49 @@
-# 날짜 리스트 생성
-date_list = [(start_dt + timedelta(days=i)).strftime("%Y-%m-%d (%a)") for i in range(days)]
-date_str = "\n".join([f"- {d}" for d in date_list])
-date_only = [d.split(" ")[0] for d in date_list]  # YYYY-MM-DD만 추출
+from datetime import datetime, date, timedelta
+from typing import List, Union
 
-return f"""
+
+def build_prompt(
+    location: str,
+    days: Union[int, str],
+    budget: Union[int, str],
+    companions: Union[List[str], str, None],
+    style: str,
+    selected_places: Union[List[str], None],
+    travel_date: Union[str, date, datetime],
+    count: int = 3,
+) -> str:
+    # ---- 입력값 정리 ----
+    days = int(days)
+    budget = int(budget)
+
+    if companions is None:
+        companions = []
+    elif isinstance(companions, str):
+        companions = [companions]
+    companion_str = ", ".join([c for c in companions if str(c).strip()]) or "없음"
+
+    selected_places = selected_places or []
+    selected_str = "\n".join(
+        [f"- {str(place).strip()}" for place in selected_places if str(place).strip()]
+    ) or "없음"
+
+    # travel_date -> datetime 보정
+    if isinstance(travel_date, str):
+        start_dt = datetime.strptime(travel_date.strip(), "%Y-%m-%d")
+    elif isinstance(travel_date, date) and not isinstance(travel_date, datetime):
+        start_dt = datetime.combine(travel_date, datetime.min.time())
+    else:
+        start_dt = travel_date
+    if not isinstance(start_dt, datetime):
+        start_dt = datetime.today()
+
+    # 날짜 리스트
+    date_list = [(start_dt + timedelta(days=i)).strftime("%Y-%m-%d (%a)") for i in range(days)]
+    date_only = [d.split(" ")[0] for d in date_list]  # YYYY-MM-DD만
+    date_str = "\n".join([f"- {d}" for d in date_list])
+
+    # ---- 프롬프트 본문 ----
+    return f"""
 너는 여행 일정 전문 플래너야.
 
 여행지는 {location}이고, 여행 기간은 총 {days}일이야.
@@ -35,10 +75,10 @@ return f"""
    - 예상 소요 시간 (예: 약 1시간 30분)
    - 예상 비용 (예: 약 15,000원)
    예시: `09:00~10:30 불국사 관람 (경북 경주시 불국로 385, 약 1시간 30분, 약 3,000원)`
-4. 일정은 **동선 고려**, 자동차로 **1시간 이내 거리**로 무리하지 않게 구성할 것. 
-4-1. 총 예상 비용은 해당 일정추천의 모든 날짜별 예상 비용을 **합산한 값**이어야 함.
+4. 일정은 **동선 고려**, 자동차로 **1시간 이내 거리**로 무리하지 않게 구성할 것.
+4-1. **총 예상 비용은 해당 일정추천의 모든 날짜별 예상 비용을 합산한 값**이어야 함.
 4-2. 일정에 나오는 **모든 장소**는 실제 존재하는 구체적인 상호명과 **도로명 주소**를 반드시 포함할 것.
-   - 예시: `"속초 ㅇㅇ횟집 (강원 속초시 중앙로 123)"`
+   - 예시: "속초맛집투어" 대신 `"속초 ○○횟집 (강원 속초시 중앙로 123)"` 처럼 작성.
 
 5. ⚠️ **각 일정 추천 하나당 총 예상 비용은 반드시 예산의 ±15% 이내**여야 해.
    - 예산이 {budget:,}원이면, 각 일정별 총 비용은 반드시 **{int(budget*0.85):,}원 ~ {int(budget*1.15):,}원** 범위 내여야 해.
