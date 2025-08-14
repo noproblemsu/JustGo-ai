@@ -2,72 +2,114 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>추천 일정</title>
+  <title>JustGo 일정 생성</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="./style.css">
   <style>
-    body {
-      font-family: 'Arial', sans-serif;
-      background-color: #f9f9f9;
-      margin: 0;
-      padding: 20px;
-    }
-
-    .title {
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
-
-    .itinerary-option {
-      background-color: #ffffff;
-      border: 1px solid #ccc;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
-      cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    .itinerary-option:hover {
-      background-color: #f0f8ff;
-    }
-
-    .details {
-      margin-top: 12px;
-      font-size: 14px;
-      color: #333;
-    }
+    .schedule-card{background:#fff;border:1px solid #e6e6e6;border-radius:12px;padding:12px;margin:10px 0;cursor:pointer}
+    .schedule-summary{font-weight:700;margin-bottom:6px}
+    .schedule-detail{display:none;color:#333;font-size:14px;line-height:1.6}
+    .schedule-card.expanded .schedule-detail{display:block}
+    .btn{border:1px solid #0055ff;padding:10px 14px;border-radius:10px;background:#eef3ff;cursor:pointer}
   </style>
 </head>
 <body>
-  <div class="title">📅 추천 일정</div>
+  <main style="max-width:680px;margin:24px auto;padding:0 16px;">
+    <h1>🌍 JustGo 일정 생성</h1>
 
-  <div class="itinerary-option" onclick="toggleDetails(1)">
-    <h3>일정 추천 1</h3>
-    <div id="details-1" class="details" style="display: none;">
-      <p>GPT가 생성한 일정 1 내용이 여기에 들어갑니다.</p>
+    <section style="display:grid;gap:12px;grid-template-columns:1fr 1fr;">
+      <label>여행지
+        <input id="dest" placeholder="예: 강릉" style="width:100%;padding:8px">
+      </label>
+      <label>여행 시작일
+        <input id="start" type="date" style="width:100%;padding:8px">
+      </label>
+      <label>여행 종료일
+        <input id="end" type="date" style="width:100%;padding:8px">
+      </label>
+      <label>예산(원)
+        <input id="budget" type="number" value="300000" step="10000" style="width:100%;padding:8px">
+      </label>
+      <label>스타일
+        <select id="style" style="width:100%;padding:8px">
+          <option>휴식 중심</option>
+          <option>액티비티 중심</option>
+          <option selected>맛집 탐방</option>
+          <option>역사 탐방</option>
+        </select>
+      </label>
+      <label>동반자(쉼표로 구분)
+        <input id="companions" placeholder="예: 친구, 가족" style="width:100%;padding:8px">
+      </label>
+      <label style="grid-column:1 / -1">가고 싶은 장소(쉼표로 구분)
+        <input id="selPlaces" placeholder="예: 불국사, 황리단길" style="width:100%;padding:8px">
+      </label>
+    </section>
+
+    <div style="margin:16px 0;">
+      <button id="sendPlanBtn" class="btn">일정 생성하기</button>
     </div>
-  </div>
 
-  <div class="itinerary-option" onclick="toggleDetails(2)">
-    <h3>일정 추천 2</h3>
-    <div id="details-2" class="details" style="display: none;">
-      <p>GPT가 생성한 일정 2 내용이 여기에 들어갑니다.</p>
-    </div>
-  </div>
+    <section id="planResult"></section>
+  </main>
 
-  <div class="itinerary-option" onclick="toggleDetails(3)">
-    <h3>일정 추천 3</h3>
-    <div id="details-3" class="details" style="display: none;">
-      <p>GPT가 생성한 일정 3 내용이 여기에 들어갑니다.</p>
-    </div>
-  </div>
+  <script type="module">
+    import { apiPlan } from "./js/api.js";
 
-  <script>
-    function toggleDetails(index) {
-      const el = document.getElementById(`details-${index}`);
-      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    const $btn = document.getElementById("sendPlanBtn");
+    const $out = document.getElementById("planResult");
+
+    function diffDays(s, e){
+      const sd=new Date(s), ed=new Date(e);
+      return Math.round((ed - sd)/(1000*60*60*24)) + 1;
     }
+
+    function renderSchedules(data){
+      const html = (data.schedules || []).map((s,i)=>`
+        <div class="schedule-card">
+          <div class="schedule-summary">🗓️ ${s.title || ("일정 추천 " + (i+1))}</div>
+          <div class="schedule-detail">${(s.detail||"").replace(/\n/g,"<br>")}</div>
+        </div>
+      `).join("") || `<div>결과가 비어있어요.</div>`;
+      $out.innerHTML = html;
+
+      // 카드 토글 + 더블클릭 시 justgomap 이동 등 확장 가능
+      document.querySelectorAll(".schedule-card").forEach(card=>{
+        let expanded=false;
+        card.addEventListener("click", ()=>{ expanded=!expanded; card.classList.toggle("expanded", expanded); });
+      });
+    }
+
+    $btn?.addEventListener("click", async ()=>{
+      try{
+        $btn.disabled = true;
+        const dest = document.getElementById("dest").value.trim();
+        const start = document.getElementById("start").value;
+        const end = document.getElementById("end").value;
+        const style = document.getElementById("style").value;
+        const companions = document.getElementById("companions").value.split(",").map(s=>s.trim()).filter(Boolean);
+        const budget = Number(document.getElementById("budget").value || 0);
+        const selected_places = document.getElementById("selPlaces").value.split(",").map(s=>s.trim()).filter(Boolean);
+
+        if(!dest || !start || !end){ alert("여행지/날짜를 입력하세요."); return; }
+        const days = diffDays(start, end);
+        if(days < 1){ alert("종료일은 시작일과 같거나 이후여야 해요."); return; }
+
+        const data = await apiPlan({ location: dest, days, style, companions, budget, selected_places, travel_date: start, count: 3 });
+        // base_point 저장 → 이후 추천에서 사용
+        localStorage.setItem("lastBasePoint", JSON.stringify(data.base_point));
+        localStorage.setItem("selectedLocation", dest);
+        localStorage.setItem("selectedDates", JSON.stringify([start, end]));
+
+        renderSchedules(data);
+      }catch(err){
+        console.error(err);
+        $out.innerHTML = `<div style="color:#c00;">요청 실패: ${err.message}</div>`;
+      }finally{
+        $btn.disabled = false;
+      }
+    });
   </script>
 </body>
 </html>

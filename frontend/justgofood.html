@@ -2,327 +2,74 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>맛집 추천</title>
+  <title>JustGo 근처 맛집 추천</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="./style.css">
   <style>
-    :root {
-      --text-primary: #000;
-      --text-secondary: rgba(0, 0, 0, 0.5);
-      --text-subtle: #828282;
-      --text-white: #fff;
-      --bg-main: #fff;
-      --bg-light-gray: #f5f5f5;
-      --border-color: #e6e6e6;
-      --primary-blue: #0059ff;
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Inter', 'Istok Web', sans-serif;
-      background-color: var(--bg-main);
-      color: var(--text-primary);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    .page-container {
-      max-width: 393px;
-      margin: 0 auto;
-      padding: 40px 16px 180px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .fixed-header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background-color: #fff;
-      z-index: 100;
-      max-width: 393px;
-      margin: 0 auto;
-      padding: 50px 16px 16px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    .main-title {
-      font-weight: 700;
-      font-size: 30px;
-      line-height: 1.44;
-      margin: 0;
-    }
-
-    .category-carousel {
-      display: flex;
-      gap: 24px;
-      overflow-x: auto;
-      padding: 12px 0;
-      margin-top: 125px;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-
-    .category-carousel::-webkit-scrollbar {
-      display: none;
-    }
-
-    .category-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-
-    .category-image {
-      width: 76px;
-      height: 76px;
-      border-radius: 50%;
-      object-fit: cover;
-      transition: opacity 0.3s;
-    }
-
-    .category-image.inactive {
-      opacity: 0.5;
-    }
-
-    .category-label,
-    .category-label-active {
-      font-weight: 500;
-      font-size: 14px;
-      text-align: center;
-      margin: 0;
-    }
-
-    .category-label {
-      color: #828282;
-    }
-
-    .category-label-active {
-      color: #161823;
-    }
-
-    .filter-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 8px;
-      margin-top: 0.5px;
-    }
-
-    .select-wrapper {
-      position: relative;
-      display: inline-block;
-      margin-right: 25px;
-    }
-
-    .sort-select {
-      font-size: 12px;
-      padding: 6px 30px 6px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border-color);
-      appearance: none;
-      background-color: white;
-      background-repeat: no-repeat;
-      background-position: right 10px center;
-      background-size: 12px;
-      text-align: left;
-      width: 120px;
-    }
-
-    .select-arrow {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 10px;
-      height: 6px;
-      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-size: contain;
-      pointer-events: none;
-    }
-
-    .result-count {
-      font-size: 14px;
-      margin-top: 4px;
-    }
-
-    .page-footer {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 393px;
-      background: #fff;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .action-button {
-      background-color: var(--primary-blue);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      width: 100%;
-      padding: 14px;
-      font-size: 18px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .skip-link {
-      font-size: 12px;
-      color: #000;
-      text-decoration: none;
-    }
+    .place-card{background:#fff;border:1px solid #e6e6e6;border-radius:12px;padding:12px;margin:10px 0;}
+    .place-title{font-weight:700;margin-bottom:6px}
+    .btn{border:1px solid #0055ff;padding:10px 14px;border-radius:10px;background:#eef3ff;cursor:pointer}
+    img{border-radius:8px;max-width:100%}
   </style>
 </head>
 <body>
-  <main class="page-container">
+  <main style="max-width:680px;margin:24px auto;padding:0 16px;">
+    <h1>🍜 근처 맛집 추천</h1>
 
-    <!-- 고정 헤더 -->
-    <div class="fixed-header">
-      <h1 class="main-title">방문하고 싶은<br>음식점을 선택해주세요.</h1>
-    </div>
+    <section style="display:flex;gap:8px;align-items:center;">
+      <input id="recommendQuery" placeholder="예: 2일차 점심 일식" style="flex:1;padding:10px">
+      <button id="recommendPlacesBtn" class="btn">추천 받기</button>
+    </section>
 
-    <!-- 음식 카테고리 -->
-    <div class="category-carousel">
-  <div class="category-item" data-category="한식">
-    <img src="justgoimages/hansik.jpg" alt="한식" class="category-image">
-    <p class="category-label-active">한식</p>
-  </div>
-  <div class="category-item" data-category="양식">
-    <img src="justgoimages/yangsik.jpg" alt="양식" class="category-image inactive">
-    <p class="category-label">양식</p>
-  </div>
-  <div class="category-item" data-category="중식">
-    <img src="justgoimages/china.jpg" alt="중식" class="category-image inactive">
-    <p class="category-label">중식</p>
-  </div>
-  <div class="category-item" data-category="일식">
-    <img src="justgoimages/japan.jpg" alt="일식" class="category-image inactive">
-    <p class="category-label">일식</p>
-  </div>
-  <div class="category-item" data-category="카페">
-    <img src="justgoimages/cafe.jpg" alt="카페" class="category-image inactive">
-    <p class="category-label">카페</p>
-  </div>
-  <div class="category-item" data-category="분식">
-    <img src="justgoimages/bunsik.jpg" alt="분식" class="category-image inactive">
-    <p class="category-label">분식</p>
-  </div>
-  <div class="category-item" data-category="치킨">
-    <img src="justgoimages/chicken.jpg" alt="치킨" class="category-image inactive">
-    <p class="category-label">치킨</p>
-  </div>
-  <div class="category-item" data-category="피자">
-    <img src="justgoimages/pizza.jpg" alt="피자" class="category-image inactive">
-    <p class="category-label">피자</p>
-  </div>
-</div>
+    <small style="display:block;margin:8px 0;color:#666;">※ 직전 생성된 일정의 첫 장소 기준으로 반경 5km 내 랭킹 추천</small>
 
-
-    <!-- 드롭다운 + 결과 개수 -->
-    <div class="filter-bar">
-      <div class="select-wrapper">
-        <select class="sort-select">
-          <option value="location">위치 유리한 곳</option>
-          <option value="rating">평점 높은 순</option>
-          <option value="review">리뷰 많은 순</option>
-        </select>
-        <span class="select-arrow"></span>
-      </div>
-      <p class="result-count">결과 0개</p>
-    </div>
+    <section id="recommendPlacesResult"></section>
   </main>
 
+  <script type="module">
+    import { apiRecommendPlaces } from "./js/api.js";
 
-  <!-- 푸터 버튼 -->
-  <footer class="page-footer">
-    <button class="action-button" onclick="location.href='justgoset.html'">완료</button>
-    <a href="justgoset.html" class="skip-link">다음에 하기</a>
-  </footer>
+    const $btn = document.getElementById("recommendPlacesBtn");
+    const $out = document.getElementById("recommendPlacesResult");
+    const $query = document.getElementById("recommendQuery");
 
- <script>
-  const categoryItems = document.querySelectorAll('.category-item');
-  let selectedCategory = null;
+    $btn?.addEventListener("click", async ()=>{
+      try{
+        $btn.disabled = true;
 
-  categoryItems.forEach(item => {
-    item.addEventListener('click', () => {
-      // 모든 카테고리 비활성화
-      categoryItems.forEach(i => {
-        i.querySelector('img').classList.add('inactive');
-        i.querySelector('p').className = 'category-label';
-      });
+        const destination = localStorage.getItem("selectedLocation") || "";
+        const dates = JSON.parse(localStorage.getItem("selectedDates") || "[]");
+        const base_point = JSON.parse(localStorage.getItem("lastBasePoint") || "null");
 
-      // 클릭한 카테고리 활성화
-      item.querySelector('img').classList.remove('inactive');
-      item.querySelector('p').className = 'category-label-active';
-      selectedCategory = item.getAttribute('data-category');
+        if(!destination){ alert("먼저 일정 생성 페이지에서 여행지를 설정하세요."); $btn.disabled=false; return; }
+
+        const data = await apiRecommendPlaces({
+          destination,
+          dates,
+          base_point,                     // 없으면 서버가 도시 중심으로 처리
+          query: $query.value.trim() || `${destination} 맛집`
+        });
+
+        $out.innerHTML = data.places.length
+          ? data.places.map(p => `
+              <div class="place-card">
+                <div class="place-title"><a href="${p.naver_url||'#'}" target="_blank">${p.name}</a></div>
+                ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : ""}
+                <div class="place-meta" style="color:#333;font-size:14px;line-height:1.6;">
+                  ${p.address ? `주소: ${p.address}<br>` : ""}
+                  ${p.distance_km != null ? `거리: ${p.distance_km}km<br>` : ""}
+                  ${p.score != null ? `점수: ${p.score}<br>` : ""}
+                </div>
+              </div>
+            `).join("")
+          : `<div>추천 결과가 비어있어요.</div>`;
+      }catch(err){
+        console.error(err);
+        $out.innerHTML = `<div style="color:#c00;">요청 실패: ${err.message}</div>`;
+      }finally{
+        $btn.disabled = false;
+      }
     });
-  });
-
-  // 완료 버튼 클릭 시 선택 저장 후 이동
-  document.querySelector('.action-button').addEventListener('click', () => {
-    if (!selectedCategory) {
-      alert("음식점을 선택해주세요.");
-      return;
-    }
-
-    localStorage.setItem('selectedFoodCategory', selectedCategory);
-    location.href = "justgoset.html";
-  });
-
- // "다음에 하기" 클릭 시
-document.querySelector('.skip-link').addEventListener('click', (e) => {
-  e.preventDefault(); // a태그 기본 이동 방지
-  const fromPage = new URLSearchParams(window.location.search).get("from");
-  localStorage.setItem('skipRecommendation', 'true');
-
-  if (fromPage === "justgoset.html") {
-    // ✅ justgoset에서 온 경우: 기존 선택값 유지
-    location.href = "justgoset.html";
-  } else {
-    // ✅ 다른 경우: 기존 선택값 삭제 후 이동
-    localStorage.removeItem('selectedFoodCategory');
-    location.href = "justgoset.html"; // 또는 다음 단계 페이지
-  }
-});
-
-window.addEventListener('load', () => {
-  const carousel = document.querySelector('.category-carousel');
-  carousel.scrollLeft = 0; // ✅ 스크롤 맨 앞으로 이동
-});
-
-
-  // (선택) 백엔드 연결 시 결과 개수 예시
-  // document.querySelector('.result-count').innerText = `결과 ${numResults}개`;
-
-
-</script>
-
+  </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
