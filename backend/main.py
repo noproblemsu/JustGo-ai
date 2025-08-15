@@ -160,6 +160,45 @@ def _safe_search_image(q: str, prefer_food: bool = False, strict: bool = True) -
     except Exception:
         return None
 
+# ========= NAVER 호출 안전 래퍼/캐시 =========
+import time
+
+_NAVER_CACHE: dict[str, dict] = {}
+_NAVER_RATE_LIMIT_UNTIL = 0.0  # epoch seconds
+_NAVER_COOLDOWN_SEC = 60       # 429 맞으면 60초 쉬기
+_NAVER_POLITE_DELAY = 0.12     # 호출 간 살짝 딜레이(너무 급하게 쿼리 안 하게)
+
+def _search_place_safe(q: str) -> dict:
+    """
+    - 캐시 우선
+    - 429 발생 시 일정 시간 동안 바로 실패(추가 타격 방지)
+    - 성공/실패 상관없이 과도 호출 방지용 소량 딜레이
+    """
+    global _NAVER_RATE_LIMIT_UNTIL
+    now = time.time()
+    if now < _NAVER_RATE_LIMIT_UNTIL:
+        return {}
+
+    if q in _NAVER_CACHE:
+        return _NAVER_CACHE[q]
+
+    try:
+        res = search_place(q) or {}
+        _NAVER_CACHE[q] = res
+        # 예의상 살짝 쉬기
+        time.sleep(_NAVER_POLITE_DELAY)
+        return res
+    except RuntimeError as e:
+        # naver_api.py에서 RuntimeError로 올려보내는 형태를 가정
+        msg = str(e)
+        if "429" in msg or "Rate limit" in msg:
+            _NAVER_RATE_LIMIT_UNTIL = now + _NAVER_COOLDOWN_SEC
+            print(f"[NAVER] rate-limited. cooling down {_NAVER_COOLDOWN_SEC}s")
+        return {}
+    except Exception:
+        return {}
+
+
 # ========= “플레이스홀더 줄만” 보강 =========
 PLACEHOLDER_PAT = re.compile(r"(주요명소|명소|관광|관광지|체험|산책|카페|휴식|식당|맛집|점심|저녁|아침)", re.I)
 _ADDR_PAT = re.compile(r"\((?:[^()]*?(?:로|길|구|시|도|동|읍|면)[^()]*)\)")
@@ -322,7 +361,7 @@ class ScheduleRequest(BaseModel):
     budget: int
     selected_places: List[str] = []
     travel_date: str
-    count: int = 3
+    count: int = 1
 
 class ScheduleItem(BaseModel):
     title: str
