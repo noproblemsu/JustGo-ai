@@ -1,21 +1,54 @@
 # backend/naver_api.py
+from __future__ import annotations
+
 import os
 import math
-import requests
+from pathlib import Path
 from typing import List, Dict, Tuple
 from urllib.parse import quote
-from dotenv import load_dotenv
 
-# ✅ backend/.env 로드 (키=값 형식)
-#    NAVER_CLIENT_ID=xxxx
-#    NAVER_CLIENT_SECRET=yyyy
-BASE_DIR = os.path.dirname(__file__)
-load_dotenv(os.path.join(BASE_DIR, ".env"))
+import requests
 
-# ---------- 공통 유틸 ----------
-def _get_keys() -> Tuple[str, str]:
-    """항상 최신 환경변수를 읽어온다(.env 포함)."""
-    return os.getenv("NAVER_CLIENT_ID"), os.getenv("NAVER_CLIENT_SECRET")
+# ── 1) .env 탐색: 실행 폴더가 달라도 안전하게 ─────────────────────────────
+#    - 우선 현재 작업폴더 기준(find_dotenv)
+#    - 실패 시, 이 파일과 같은 폴더(=backend)의 .env 재시도
+try:
+    from dotenv import load_dotenv, find_dotenv
+    loaded = load_dotenv(find_dotenv(usecwd=True))
+    if not loaded:
+        load_dotenv(dotenv_path=Path(__file__).resolve().with_name(".env"))
+except Exception:
+    # python-dotenv 미설치여도 앱은 뜨게 함 (st.secrets만으로도 동작 가능)
+    pass
+
+# Streamlit secrets도 지원(있으면 자동 fallback)
+try:
+    import streamlit as st  # type: ignore
+except Exception:
+    st = None  # backend 스크립트 단독 실행 시에도 안전
+
+
+# ── 2) 공통 유틸 ─────────────────────────────────────────────────────────────
+def _get_from_env_or_secrets(key: str) -> str | None:
+    """환경변수 → Streamlit secrets 순서로 조회."""
+    val = os.getenv(key)
+    if val:
+        return val
+    if st is not None:
+        try:
+            return st.secrets.get(key)  # type: ignore[attr-defined]
+        except Exception:
+            return None
+    return None
+
+
+def _get_keys() -> Tuple[str | None, str | None]:
+    """항상 최신 키를 조회(.env 로드 후 os.getenv, 없으면 secrets)."""
+    return (
+        _get_from_env_or_secrets("NAVER_CLIENT_ID"),
+        _get_from_env_or_secrets("NAVER_CLIENT_SECRET"),
+    )
+
 
 def _ensure_key() -> Tuple[str, str]:
     cid, sec = _get_keys()
@@ -23,42 +56,48 @@ def _ensure_key() -> Tuple[str, str]:
         raise RuntimeError("NAVER_CLIENT_ID / NAVER_CLIENT_SECRET not set")
     return cid, sec
 
+
 def naver_map_link(name: str) -> str:
+    # 이름만 검색 쿼리로(주소/번호 섞여도 안전)
     return f"https://map.naver.com/v5/search/{quote(name)}"
+
 
 def _haversine_km(lat1, lon1, lat2, lon2) -> float:
     R = 6371.0
     to_rad = math.radians
     dlat = to_rad(lat2 - lat1)
     dlon = to_rad(lon2 - lon1)
-    a = math.sin(dlat/2)**2 + math.cos(to_rad(lat1))*math.cos(to_rad(lat2))*math.sin(dlon/2)**2
+    a = math.sin(dlat / 2) ** 2 + math.cos(to_rad(lat1)) * math.cos(to_rad(lat2)) * math.sin(dlon / 2) ** 2
     return 2 * R * math.asin(min(1, math.sqrt(a)))
 
+
 def _tm128_to_wgs84(x: float, y: float) -> Tuple[float, float]:
-    """네이버 Local API mapx/mapy(TM128) -> 위경도 근사 변환"""
+    """네이버 Local API mapx/mapy(TM128) → 위경도 근사 변환"""
     origin_lat, origin_lng = 38.0, 127.5
     dx, dy = (x - 307000), (y - 548000)
     lat = origin_lat + (dy / 88000.0)
     lng = origin_lng + (dx / 111000.0)
     return float(lat), float(lng)
 
-# ---------- 지역검색 ----------
+
+# ── 3) 지역검색(API) ────────────────────────────────────────────────────────
 def naver_local_search(query: str, display: int = 20) -> List[Dict]:
     cid, sec = _ensure_key()
     url = "https://openapi.naver.com/v1/search/local.json"
     headers = {
         "X-Naver-Client-Id": cid,
-        "X-Naver-Client-Secret": sec
+        "X-Naver-Client-Secret": sec,
     }
     params = {
         "query": query,
         "display": max(1, min(display, 45)),  # API 제한
         "start": 1,
-        "sort": "random"
+        "sort": "random",
     }
     r = requests.get(url, headers=headers, params=params, timeout=10)
     if r.status_code != 200:
         raise RuntimeError(f"Naver API error: {r.status_code} {r.text}")
+
     data = r.json()
     items: List[Dict] = []
     for it in data.get("items", []):
@@ -72,6 +111,7 @@ def naver_local_search(query: str, display: int = 20) -> List[Dict]:
         items.append({"name": name, "address": addr, "mapx": mapx, "mapy": mapy})
     return items
 
+
 def search_place(query: str):
     """단건 조회(좌표 포함) — 일정 첫 장소 좌표 추출에 사용"""
     items = naver_local_search(query, display=1)
@@ -80,14 +120,21 @@ def search_place(query: str):
     it = items[0]
     lat, lng = _tm128_to_wgs84(it["mapx"], it["mapy"])
     return {
-        "title": it["name"], "address": it["address"],
-        "lat": lat, "lng": lng, "naver_url": naver_map_link(it["name"])
+        "title": it["name"],
+        "address": it["address"],
+        "lat": lat,
+        "lng": lng,
+        "naver_url": naver_map_link(it["name"]),
     }
 
-# ---------- 거리+키워드 적합도 랭킹 ----------
+
+# ── 4) 거리+키워드 적합도 랭킹 ──────────────────────────────────────────────
 def search_and_rank_places(
-    prev_lat: float, prev_lng: float, keyword: str,
-    max_distance_km: float = 5.0, display: int = 30
+    prev_lat: float,
+    prev_lng: float,
+    keyword: str,
+    max_distance_km: float = 5.0,
+    display: int = 30,
 ) -> List[Dict]:
     results = naver_local_search(keyword, display=display)
     ranked: List[Dict] = []
@@ -99,11 +146,17 @@ def search_and_rank_places(
         name = it["name"]
         # 간단 적합도: 키워드 토큰이 이름에 모두 있으면 가산
         fit = 1.0 if all(k.strip() in name for k in keyword.split()) else 0.0
-        score = 1.0/(1.0+dist) + 0.3*fit  # 거리 우선, 이름 적합도 가산
-        ranked.append({
-            "name": name, "address": it["address"],
-            "lat": lat, "lng": lng, "distance_km": dist,
-            "score": round(score, 4), "naver_url": naver_map_link(name)
-        })
+        score = 1.0 / (1.0 + dist) + 0.3 * fit  # 거리 우선, 이름 적합도 가산
+        ranked.append(
+            {
+                "name": name,
+                "address": it["address"],
+                "lat": lat,
+                "lng": lng,
+                "distance_km": dist,
+                "score": round(score, 4),
+                "naver_url": naver_map_link(name),
+            }
+        )
     ranked.sort(key=lambda x: x["score"], reverse=True)
     return ranked

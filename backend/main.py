@@ -1,169 +1,212 @@
-# backend/main.py  (파일명이 app.py여도 동일하게 사용 가능)
+# backend/main.py
 from __future__ import annotations
 
-import json
-import re
-import urllib.parse
-from datetime import date, datetime, timedelta
-from typing import List, Optional, Tuple, Dict
-
-# ── (중요) .env 를 최우선으로 로드 ─────────────────────────
+# ========= .env 먼저 로드(키 인식 문제 예방) =========
 from pathlib import Path
 try:
     from dotenv import load_dotenv  # pip install python-dotenv
-    # 프로젝트 루트(…/JustGo-ai/.env)에서 로드
     load_dotenv(dotenv_path=(Path(__file__).resolve().parent.parent / ".env"))
 except Exception:
-    # dotenv가 없어도 진행은 되게 함(환경변수 직접 세팅된 경우)
     pass
 
-# ── FastAPI ──────────────────────────────────────────────
+# ========= 표준/써드파티 =========
+import re
+import json
+import urllib.parse
+import traceback
+from datetime import date, datetime, timedelta
+from typing import List, Optional, Tuple, Dict
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-# ── 내부 모듈 (반드시 dotenv 로드 이후 import) ────────────
-from .gpt_client import generate_schedule_gpt, client  # client: OpenAI(...) 혹은 None/미설치 대응
-from .gpt_places_recommender import ask_gpt, extract_places
-from .naver_api import search_place, search_and_rank_places, search_image
+  # ===== 내부 모듈 (항상 상대 경로로) =====
+def _try_imports():
+    """
+    backend 패키지로 실행하거나(uvicorn backend.main:app),
+    루트에서 실행할 때 모두 동작하도록 import 경로를 유연하게 처리.
+    """
+ 
+try:
+    from .gpt_client import generate_schedule_gpt, client
+except Exception as e:
+    # 절대경로로 실행할 때를 대비한 백업
+    from gpt_client import generate_schedule_gpt, client  # type: ignore
 
 try:
-    from naver_api import search_image as _search_image
+    from .gpt_places_recommender import ask_gpt, extract_places
 except Exception:
-    _search_image = None
+    # 없으면 더미 함수로 막아두기
+    def ask_gpt(prompt: str, destination: str | None = None) -> str:
+        return prompt
+    def extract_places(text: str):
+        return [], []
 
+try:
+    from .naver_api import search_place, search_and_rank_places, search_image as _search_image
+except Exception:
+    from .naver_api import search_place, search_and_rank_places  # type: ignore
+    _search_image = None  # 이미지 검색이 없더라도 서버가 떠야 함
 
-# ── FastAPI 기본 설정 ────────────────────────────────────
+# ========= FastAPI =========
 app = FastAPI(title="JustGo API (Unified)")
 
 app.add_middleware(
     CORSMiddleware,
-    # 필요 시 특정 도메인만 허용하고 싶으면 아래 2줄만 남겨도 됨
-    allow_origins=["*", "http://127.0.0.1:5500", "http://localhost:5500"],
+    allow_origins=["*"],   # 필요 시 프론트 도메인으로 제한
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-# 요청/응답 간단 로그 (디버그용)
+# (선택) 간단 요청 로깅
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    body = await request.body()
     try:
-        body_text = body.decode("utf-8")
+        body_bytes = await request.body()
+        body_text = body_bytes.decode("utf-8", errors="ignore")
+        print("\n========== [REQ] ==========")
+        print(f"{request.method} {request.url}")
+        if body_text:
+            print(f"[BODY] {body_text[:800]}")
     except Exception:
-        body_text = str(body)
-    print("\n========== [REQ] ==========")
-    print(f"{request.method} {request.url}")
-    if body_text:
-        print(f"[BODY] {body_text[:800]}")
+        pass
     resp = await call_next(request)
-    print(f"[RES] status={resp.status_code}")
-    print("===========================\n")
+    try:
+        print(f"[RES] status={resp.status_code}")
+        print("===========================\n")
+    except Exception:
+        pass
     return resp
 
+# ========= 유틸 =========
+def _model_to_dict(m):
+    return m.model_dump() if hasattr(m, "model_dump") else m.dict()
 
-# ── 유틸 ────────────────────────────────────────────────
+def ask_gpt_safe(prompt: str, destination: Optional[str] = None) -> str:
+    """프로젝트별 ask_gpt 시그니처 차이를 흡수하는 래퍼."""
+    try:
+        return _ask_gpt(prompt, destination=destination)
+    except TypeError:
+        try:
+            return _ask_gpt(prompt, destination)
+        except TypeError:
+            return _ask_gpt(prompt)
+
+def _normalize_gpt_text(text: str) -> str:
+    text = (text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    text = re.sub(r"^```(?:\w+)?\n", "", text)
+    text = re.sub(r"\n```$", "", text)
+    return text.strip()
+
 def parse_total_cost(text: str) -> int:
-    """본문의 '약 xx,xxx원' 패턴을 모두 합산."""
-    prices = re.findall(r'약\s*([\d,]+)원', text)
-    return sum(int(p.replace(',', '')) for p in prices)
-
+    """'약 12,000원' / '12000원' 등 다양한 표기 합산."""
+    prices = re.findall(r'(?:약\s*)?(\d{1,3}(?:,\d{3})+|\d+)\s*원', text)
+    total = 0
+    for p in prices:
+        try:
+            total += int(p.replace(",", ""))
+        except Exception:
+            pass
+    return total
 
 def expected_date_strings(start: date, num_days: int) -> tuple[list[str], list[str]]:
-    """YYYY-MM-DD (Tue)와 YYYY-MM-DD 두 포맷 모두 준비(검증용)."""
     dts = [(datetime.combine(start, datetime.min.time()) + timedelta(days=i)) for i in range(num_days)]
     full = [dt.strftime("%Y-%m-%d (%a)") for dt in dts]
     short = [dt.strftime("%Y-%m-%d") for dt in dts]
     return full, short
 
-
 def block_has_all_dates(block_text: str, full_dates: list[str], short_dates: list[str]) -> bool:
     return all((fd in block_text) or (sd in block_text) for fd, sd in zip(full_dates, short_dates))
 
-
-def repair_block_with_missing_dates(block_text: str, missing_dates: list[str]) -> str:
-    """
-    일정 블록에서 날짜가 누락되면 GPT에게 보완 요청(한 번).
-    실패 시 원문 유지.
-    """
-    if not missing_dates:
-        return block_text
-    try:
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "너는 여행 일정 전문가야. 모든 날짜(아침/점심/저녁 포함)를 작성하고, "
-                    "실제 존재하는 상호명과 도로명 주소를 포함하며, 총 예상비용은 마지막에만 1회 작성한다."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    "아래 일정 블록에서 일부 날짜가 누락되었습니다. 누락된 날짜를 포함해 동일한 형식으로 보완하세요.\n\n"
-                    f"[누락된 날짜]: {', '.join(missing_dates)}\n\n[기존 블록]\n{block_text}"
-                ),
-            },
-        ]
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.3,
-        )
-        return resp.choices[0].message.content.strip()
-    except Exception:
-        return block_text
-
-
-def generate_naver_map_url(place_name: str, destination: Optional[str] = None, address: Optional[str] = None) -> str:
-    """네이버 지도 검색 URL을 더 구체적으로 생성(도시/주소 앞 토큰 포함)."""
-    parts = [place_name]
-    if destination:
-        parts.append(destination)
-    if address:
-        toks = address.split()
-        parts.extend(toks[:2])  # 시/구 정도만
-    dedup: list[str] = []
-    for p in parts:
-        p = (p or "").strip()
-        if p and p not in dedup:
-            dedup.append(p)
-    q = " ".join(dedup)
-    return f"https://map.naver.com/v5/search/{urllib.parse.quote(q)}"
-
-
 def _preview(text: str, n: int = 350) -> str:
-    if text is None:
+    if not text:
         return ""
     t = text.replace("\n", "\\n")
     return t[:n] + ("..." if len(t) > n else "")
 
+def generate_naver_map_url(place_name: str, destination: Optional[str] = None, address: Optional[str] = None) -> str:
+    parts = [place_name]
+    if destination:
+        parts.append(destination)
+    if address:
+        toks = (address or "").split()
+        if toks:
+            parts.append(toks[0])
+        if len(toks) > 1:
+            parts.append(toks[1])
+    seen, qparts = set(), []
+    for p in parts:
+        p = (p or "").strip()
+        if p and p not in seen:
+            seen.add(p)
+            qparts.append(p)
+    return f"https://map.naver.com/v5/search/{urllib.parse.quote(' '.join(qparts))}"
 
-def _safe_search_image(q: str) -> Optional[str]:
-    """이미지 검색이 불가능한 환경이면 None 반환."""
+def _safe_search_image(q: str, prefer_food: bool = False, strict: bool = True) -> Optional[str]:
+    """naver_api.search_image가 없거나 시그니처가 달라도 안전 호출."""
     if _search_image is None:
         return None
     try:
-        return _search_image(q)
+        # 새 시그니처(prefer_food, strict)
+        return _search_image(q, prefer_food=prefer_food, strict=strict)  # type: ignore
+    except TypeError:
+        try:
+            # 옛 시그니처(인자 하나)
+            return _search_image(q)  # type: ignore
+        except Exception:
+            return None
     except Exception:
         return None
 
+# ========= “플레이스홀더 줄만” 보강 =========
+PLACEHOLDER_PAT = re.compile(r"(주요명소|명소|관광|관광지|체험|산책|카페|휴식|식당|맛집|점심|저녁|아침)", re.I)
+_ADDR_PAT = re.compile(r"\((?:[^()]*?(?:로|길|구|시|도|동|읍|면)[^()]*)\)")
+_COST_PAT = re.compile(r"(?:약\s*)?(?:\d{1,3}(?:,\d{3})+|\d+)\s*원")
+_TIME_RE = re.compile(r"\b\d{2}:\d{2}\s*~\s*\d{2}:\d{2}\b")
 
-def _call_ask_gpt(prompt: str, destination: Optional[str] = None) -> str:
-    """
-    ask_gpt 시그니처가 (prompt) 또는 (prompt, destination)일 수 있으므로 안전호출.
-    """
+def line_has_address(line: str) -> bool:
+    return bool(_ADDR_PAT.search(line))
+
+def line_has_cost(line: str) -> bool:
+    return bool(_COST_PAT.search(line))
+
+def line_looks_like_placeholder(line: str) -> bool:
+    m = re.match(r"\s*\d{2}:\d{2}\s*~\s*\d{2}:\d{2}\s+(.+)", line)
+    if not m:
+        return False
+    name = m.group(1).split("(")[0].strip()
+    return bool(PLACEHOLDER_PAT.search(name))
+
+def _replace_line_with_real_place(line: str, city: str) -> str:
     try:
-        # 일부 구현은 (prompt, destination)을 받음
-        return ask_gpt(prompt, destination)  # type: ignore[arg-type]
-    except TypeError:
-        # 기본 (prompt)만 받는 구현
-        return ask_gpt(prompt)  # type: ignore[misc]
+        m = re.match(r"(\s*\d{2}:\d{2}\s*~\s*\d{2}:\d{2})\s+(.+)", line)
+        if not m:
+            return line
+        time_span, rest = m.groups()
+        name_only = rest.split("(")[0].strip()
+        if not PLACEHOLDER_PAT.search(name_only):
+            return line
 
+        kw = "관광지"
+        if re.search(r"(점심|아침|브런치)", rest, re.I):
+            kw = "맛집"
+        elif re.search(r"저녁", rest, re.I):
+            kw = "맛집"
+        elif re.search(r"(카페|휴식)", rest, re.I):
+            kw = "카페"
 
-# ── 스키마 ──────────────────────────────────────────────
+        q = f"{city} {kw}"
+        info = search_place(q) or {}
+        cand_name = info.get("name") or info.get("title") or q
+        cand_name = re.sub(r"<[^>]+>", "", str(cand_name))  # 네이버 <b>태그 제거
+        addr = info.get("address") or ""
+        return f"{time_span} {cand_name}" + (f" ({addr})" if addr else "")
+    except Exception:
+        return line
+
+# ========= 스키마 =========
 class ScheduleRequest(BaseModel):
     location: str
     days: int
@@ -174,16 +217,13 @@ class ScheduleRequest(BaseModel):
     travel_date: str
     count: int = 3
 
-
 class ScheduleItem(BaseModel):
     title: str
     detail: str
 
-
 class ScheduleResponse(BaseModel):
     schedules: List[ScheduleItem]
-    base_point: Optional[Tuple[float, float]] = None  # 첫 장소 좌표(후속 추천 기준)
-
+    base_point: Optional[Tuple[float, float]] = None
 
 class RecommendRequest(BaseModel):
     destination: str
@@ -193,18 +233,18 @@ class RecommendRequest(BaseModel):
     hasPet: bool = False
     budget: Optional[int] = None
     selected_places: List[str] = Field(default_factory=list)
-    base_point: Optional[Tuple[float, float]] = None  # 기준점(없으면 도시 대표점/첫 장소 좌표)
-    query: Optional[str] = None                      # 사용자가 입력한 원문 쿼리
-
+    base_point: Optional[Tuple[float, float]] = None
+    query: Optional[str] = None
+    # 친구 코드 기능 유지: 음식 카테고리(한식/양식/중식/일식/카페/패스트푸드)
+    food_categories: List[str] = Field(default_factory=list)
 
 class Review(BaseModel):
     text: str
     stars: Optional[float] = None
 
-
 class Place(BaseModel):
     name: str
-    category: str
+    category: str     # "관광지" or "음식점"
     address: Optional[str] = None
     rating: Optional[float] = None
     review_count: Optional[int] = None
@@ -214,73 +254,108 @@ class Place(BaseModel):
     score: Optional[float] = None
     reviews: List[Review] = Field(default_factory=list)
 
-
 class RecommendResponse(BaseModel):
     places: List[Place]
-
 
 class Schedule(BaseModel):
     id: int
     title: str
     dates: str
 
-
-# ── Chat 편집 스키마 (신규) ─────────────────────────────
-class ChatRequest(BaseModel):
-    message: str
-    itineraryIndex: int = Field(..., ge=0)
-    itineraryText: Optional[str] = None
-    context: Optional[Dict] = None  # {"budget": 300000} 등
-
-
-class ChatResponse(BaseModel):
-    reply: str
-    updatedItinerary: Optional[str] = None
-
-
-# 샘플 일정(옵션)
+# 데모 일정 목록
 mock_schedules = [
     {"id": 1, "title": "제주도 여행", "dates": "2025.08.10 ~ 08.12"},
     {"id": 2, "title": "부산 가족여행", "dates": "2025.08.15 ~ 08.17"},
     {"id": 3, "title": "서울 데이트 코스", "dates": "2025.09.01"},
 ]
 
+# ========= 파싱/백업 유틸(3개 보장) =========
+SECTION_PATTERNS = [
+    r"(일정추천\s*\d+\s*:\s*[^\n]+)",
+    r"(?:^|\n)#+\s*(일정추천\s*\d+\s*[:：]?\s*[^\n]+)",
+    r"(?:^|\n)\*\*\s*(일정추천\s*\d+\s*[:：]?\s*[^\n]+)\s*\*\*",
+]
 
-# ── 엔드포인트 ─────────────────────────────────────────
+def _extract_sections(text: str) -> list[tuple[str, str]]:
+    text = _normalize_gpt_text(text or "")
+    for pat in SECTION_PATTERNS:
+        matches = list(re.finditer(pat, text, flags=re.I))
+        if matches:
+            sections: list[tuple[str, str]] = []
+            for i, m in enumerate(matches):
+                title = m.group(1).strip()
+                start = m.end()
+                end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+                body = text[start:end].strip()
+                sections.append((title, body))
+            if sections:
+                return sections
+    # 백업: --- 구분선
+    chunks = re.split(r"\n\s*---\s*\n", text)
+    if len(chunks) >= 2:
+        return [(f"일정추천 {i+1}", ch.strip()) for i, ch in enumerate(chunks)]
+    return []
+
+def _build_sample_itinerary(location: str, start_date: str, days: int, title: str) -> str:
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    lines = [title, ""]
+    for i in range(days):
+        d = (start + timedelta(days=i)).strftime("%Y-%m-%d (%a)")
+        lines += [
+            f"{d} (Day{i+1})",
+            f"09:00 ~ 12:00 {location} 주요명소 A (약 0원)",
+            "12:00 ~ 13:30 점심 (약 12,000원)",
+            f"14:00 ~ 18:00 {location} 체험/산책 (약 0원)",
+            "19:00 ~ 20:30 저녁 (약 15,000원)",
+            "",
+        ]
+    return "\n".join(lines).strip()
+
+def _ensure_three(sections: list[tuple[str, str]], req: "ScheduleRequest") -> list[tuple[str, str]]:
+    if len(sections) >= req.count:
+        return sections[: req.count]
+    out = list(sections)
+    for i in range(req.count - len(out)):
+        idx = len(out) + 1
+        title = f"일정추천 {idx}: {req.location} {req.days}일 샘플"
+        body = _build_sample_itinerary(req.location, req.travel_date, req.days, title)
+        out.append((title, body))
+    return out[: req.count]
+
+# ========= 엔드포인트 =========
 @app.get("/health")
 def health():
     return {"ok": True}
 
-
 @app.get("/api/schedules", response_model=List[Schedule])
 def get_schedules():
-    print("[/api/schedules] return mock_schedules len:", len(mock_schedules))
     return mock_schedules
-
 
 @app.post("/api/plan", response_model=ScheduleResponse)
 def create_plan(req: ScheduleRequest):
     """
-    GPT로 일정 3개 생성 → 날짜 누락 보정 → 총비용 재계산 → 첫 일정 첫 장소에서 좌표(base_point) 캐시
-    프론트는 반환된 base_point를 이후 추천 API에 넘기면, '직전 일정과 거리'까지 고려한 추천 가능.
+    GPT 호출 → 견고 파싱 → 3개 보장 → (필요시) 날짜 보정 → 플레이스홀더 보강 → 품질 가드 → 비용 재계산 → base_point 추출
     """
     try:
-        print("[/api/plan] payload:", req.model_dump())
+        # 1) GPT 호출(실패해도 계속 진행)
+        try:
+            raw = generate_schedule_gpt(
+                location=req.location,
+                days=req.days,
+                style=req.style,
+                companions=req.companions,
+                budget=req.budget,
+                selected_places=req.selected_places,
+                travel_date=req.travel_date,
+                count=req.count,
+            ) or ""
+        except Exception as e:
+            print("[/api/plan] generate_schedule_gpt ERROR:", e)
+            raw = ""
 
-        raw = generate_schedule_gpt(
-            location=req.location,
-            days=req.days,
-            style=req.style,
-            companions=req.companions,
-            budget=req.budget,
-            selected_places=req.selected_places,
-            travel_date=req.travel_date,
-            count=req.count,
-        )
-        print("[/api/plan] raw GPT preview:", _preview(raw))
+        raw = _normalize_gpt_text(raw)
+        sections = _ensure_three(_extract_sections(raw), req)  # 정확히 req.count개 보장
 
-        raw_blocks = re.split(r"(?:---)?\s*일정추천\s*\d+:", raw.strip())
-        titles = re.findall(r"(일정추천\s*\d+:\s*[^\n]+)", raw.strip())
         start_dt = datetime.strptime(req.travel_date, "%Y-%m-%d").date()
         full_dates, short_dates = expected_date_strings(start_dt, req.days)
 
@@ -288,114 +363,247 @@ def create_plan(req: ScheduleRequest):
         base_point: Optional[Tuple[float, float]] = None
         first_point_locked = False
 
-        for i, block in enumerate(raw_blocks[1:]):
-            title = titles[i] if i < len(titles) else f"일정추천 {i+1}"
-            detail = block.strip()
+        for i, (title, body) in enumerate(sections):
+            detail = (body or "").strip()
 
-            # 날짜 누락 보정 1회
-            if not block_has_all_dates(detail, full_dates, short_dates):
-                missing = [sd for fd, sd in zip(full_dates, short_dates) if (fd not in detail) and (sd not in detail)]
-                detail = repair_block_with_missing_dates(detail, missing)
+            # (1) 날짜 누락 보정(최대 1회)
+            if not block_has_all_dates(detail, full_dates, short_dates) and client is not None:
+                try:
+                    messages = [
+                        {"role": "system", "content": (
+                            "너는 여행 일정 전문가야. 모든 날짜(아침/점심/저녁 포함)를 작성하고, "
+                            "실제 존재하는 상호명과 도로명 주소를 포함하며, 총 예상비용은 마지막에만 1회 작성한다."
+                        )},
+                        {"role": "user", "content": (
+                            "아래 일정 블록에서 일부 날짜가 누락되었습니다. 누락된 날짜를 포함해 동일한 형식으로 보완하세요.\n\n"
+                            f"[누락된 날짜]: {', '.join([sd for fd, sd in zip(full_dates, short_dates) if (fd not in detail) and (sd not in detail)])}\n\n"
+                            f"[기존 블록]\n{detail}"
+                        )},
+                    ]
+                    resp = client.chat.completions.create(
+                        model="gpt-4o-mini", messages=messages, temperature=0.3,
+                    )
+                    patched = (resp.choices[0].message.content or "").strip()
+                    if patched:
+                        detail = _normalize_gpt_text(patched)
+                except Exception:
+                    pass
 
-            # 총비용 문구 제거 후 재계산
+            # (2) 플레이스홀더 줄만 실제 상호/주소로 보강
+            fixed_lines: list[str] = []
+            for line in (detail.splitlines() or []):
+                if line_has_address(line) or line_has_cost(line):
+                    fixed_lines.append(line)
+                elif line_looks_like_placeholder(line):
+                    fixed_lines.append(_replace_line_with_real_place(line, req.location))
+                else:
+                    fixed_lines.append(line)
+            detail = "\n".join(fixed_lines).strip() or _build_sample_itinerary(req.location, req.travel_date, req.days, title)
+
+            # (3) 품질 가드(너무 짧거나 '...' 위주, 시간 구간 부족, 날짜 미포함 등)
+            time_spans = _TIME_RE.findall(detail)
+            has_any_date = any((fd in detail) or (sd in detail) for fd, sd in zip(full_dates, short_dates))
+            if (len(detail) < 140) or (len(time_spans) < 2) or ("..." in detail) or ("…") in detail or (not has_any_date):
+                detail = _build_sample_itinerary(req.location, req.travel_date, req.days, title)
+
+            # (4) 총비용 문구 제거 → 재계산 후 1회만 표기
             detail = re.sub(r"총 예상 비용.*?원\W*", "", detail)
             cost = parse_total_cost(detail)
             detail += f"\n\n총 예상 비용은 약 {cost:,}원으로, 입력 예산인 {req.budget:,}원 내에서 잘 계획되었어요."
 
             schedules.append(ScheduleItem(title=title, detail=detail))
 
-            # 첫 일정의 첫 “시간 줄”에서 장소 추출 → 좌표 잠금
+            # (5) base_point: 첫 일정의 첫 타임라인 줄에서 장소 좌표
             if (not first_point_locked) and i == 0:
                 for line in detail.splitlines():
                     m = re.search(r"\b\d{2}:\d{2}\s*~\s*\d{2}:\d{2}\s*([^(]+)", line)
                     if not m:
                         continue
                     place_name = m.group(1).strip()
-                    sp = search_place(f"{req.location} {place_name}")
-                    if sp and sp.get("lat") and sp.get("lng"):
-                        try:
-                            base_point = (float(sp["lat"]), float(sp["lng"]))
-                            first_point_locked = True
-                        except Exception:
-                            pass
+                    sp = search_place(f"{req.location} {place_name}") or {}
+                    try:
+                        lat, lng = float(sp.get("lat")), float(sp.get("lng"))
+                        base_point = (lat, lng)
+                        first_point_locked = True
+                    except Exception:
+                        pass
                     break
 
-        print("[/api/plan] schedules:", len(schedules), "base_point:", base_point)
         return ScheduleResponse(schedules=schedules, base_point=base_point)
 
     except Exception as e:
-        print("[/api/plan][ERROR]", repr(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        # 최후 방어: 샘플 3개라도 반환(프론트 빨간 경고 방지)
+        print("[/api/plan][FATAL]", e)
+        traceback.print_exc()
+        fallback: List[ScheduleItem] = []
+        for i in range(3):
+            title = f"일정추천 {i+1}: {req.location} {req.days}일 샘플"
+            body = _build_sample_itinerary(req.location, req.travel_date, req.days, title)
+            cost = parse_total_cost(body)
+            body += f"\n\n총 예상 비용은 약 {cost:,}원으로, 입력 예산인 {req.budget:,}원 내에서 잘 계획되었어요."
+            fallback.append(ScheduleItem(title=title, detail=body))
+        return ScheduleResponse(schedules=fallback, base_point=None)
 
+# ========= 관광지 추천(친구 코드 유지) =========
+@app.post("/api/recommend/attractions", response_model=RecommendResponse)
+def recommend_attractions(req: RecommendRequest):
+    try:
+        print("\n[REQ] /api/recommend/attractions", _model_to_dict(req))
+        try:
+            prompt = generate_schedule_gpt(
+                location=req.destination,
+                days=len(req.dates) if req.dates else 3,
+                style=", ".join(req.styles) if req.styles else "자유 여행",
+                companions=", ".join(req.companions) if req.companions else "없음",
+                budget=req.budget or 0,
+                selected_places=req.selected_places,
+                travel_date=req.dates[0] if req.dates else str(date.today()),
+            )
+        except Exception as e:
+            print("[ERROR] generate_schedule_gpt:", e); traceback.print_exc()
+            return RecommendResponse(places=[])
 
+        try:
+            gpt_text = ask_gpt_safe(prompt, req.destination)
+        except Exception as e:
+            print("[ERROR] ask_gpt:", e); traceback.print_exc()
+            return RecommendResponse(places=[])
+
+        try:
+            sightseeing, _ = extract_places(gpt_text or "")
+        except Exception as e:
+            print("[ERROR] extract_places:", e); traceback.print_exc()
+            return RecommendResponse(places=[])
+
+        places: List[Place] = []
+        for raw in sightseeing:
+            try:
+                cleaned = re.sub(r"^\d+\.\s*", "", raw or "")
+                name = (cleaned.split("-")[0] if cleaned else "").strip()
+                if not name:
+                    continue
+                info = search_place(name) or {}
+                addr = info.get("address")
+                url = generate_naver_map_url(name, req.destination, addr)
+                img = None
+                iq = f"{name} {req.destination} 관광지"
+                if addr:
+                    iq += f" {addr.split()[0]}"
+                img = _safe_search_image(iq, prefer_food=False, strict=True)
+                places.append(Place(
+                    name=name, category="관광지", address=addr,
+                    rating=info.get("rating"), review_count=info.get("review_count"),
+                    naver_url=url, image_url=img, reviews=[]
+                ))
+            except Exception as loop_e:
+                print("[WARN] attractions loop:", loop_e); traceback.print_exc()
+                continue
+        return RecommendResponse(places=places)
+    except Exception as e:
+        print("[FATAL] attractions:", e); traceback.print_exc()
+        return RecommendResponse(places=[])
+
+# ========= 음식점 추천(친구 코드 유지) =========
+FOOD_BROAD = {
+    "한식": ["한식","백반","한정식","국밥","비빔밥","갈비","불고기","냉면","순대","곱창","족발","막창","삼겹","한우","곰탕","칼국수","전골"],
+    "양식": ["양식","스테이크","파스타","피자","브런치","버거","샐러드","그릴","비스트로","수제버거","리조또","스페인","이탈리안"],
+    "중식": ["중식","짜장","자장","짬뽕","탕수육","중화","딤섬","마라","훠궈","양꼬치","마라탕","마라상궈"],
+    "일식": ["일식","스시","초밥","오마카세","라멘","우동","돈카츠","텐동","야키니쿠","사시미","이자카야"],
+    "카페": ["카페","디저트","커피","베이커리","케이크","빵집","브런치카페","티룸","dessert","coffee","bakery"],
+    "패스트푸드": ["분식","떡볶이","김밥","라볶이","튀김","순대","치킨","피자","버거","핫도그","샌드위치","kfc","맥도날드","롯데리아"]
+}
+def _guess_broad_category(name: str, cat_str: str) -> Optional[str]:
+    s = f"{name or ''} {cat_str or ''}".lower()
+    for broad, kws in FOOD_BROAD.items():
+        for kw in kws:
+            if kw.lower() in s:
+                return broad
+    return None
+def _want_category(name: str, cat_str: str, wanted: List[str]) -> bool:
+    if not wanted:
+        return True
+    broad = _guess_broad_category(name, cat_str)
+    if broad and broad in wanted:
+        return True
+    s = f"{name or ''} {cat_str or ''}".lower()
+    for w in wanted:
+        if w in FOOD_BROAD:
+            if any(kw.lower() in s for kw in FOOD_BROAD[w]):
+                return True
+        else:
+            if w.lower() in s:
+                return True
+    return False
+
+@app.post("/api/recommend/restaurants", response_model=RecommendResponse)
+def recommend_restaurants(req: RecommendRequest):
+    try:
+        print("\n[REQ] /api/recommend/restaurants", _model_to_dict(req))
+        try:
+            prompt = generate_schedule_gpt(
+                location=req.destination,
+                days=len(req.dates) if req.dates else 3,
+                style=", ".join(req.styles) if req.styles else "자유 여행",
+                companions=", ".join(req.companions) if req.companions else "없음",
+                budget=req.budget or 0,
+                selected_places=req.selected_places,
+                travel_date=req.dates[0] if req.dates else str(date.today()),
+            )
+        except Exception as e:
+            print("[ERROR] generate_schedule_gpt:", e); traceback.print_exc()
+            return RecommendResponse(places=[])
+
+        try:
+            gpt_text = ask_gpt_safe(prompt, req.destination)
+        except Exception as e:
+            print("[ERROR] ask_gpt:", e); traceback.print_exc()
+            return RecommendResponse(places=[])
+
+        try:
+            _, restaurants = extract_places(gpt_text or "")
+        except Exception as e:
+            print("[ERROR] extract_places:", e); traceback.print_exc()
+            return RecommendResponse(places=[])
+
+        wanted = list(dict.fromkeys(req.food_categories or []))  # 중복 제거
+        places: List[Place] = []
+        for raw in restaurants:
+            try:
+                cleaned = re.sub(r"^\d+\.\s*", "", raw or "")
+                name = (cleaned.split("-")[0] if cleaned else "").strip()
+                if not name:
+                    continue
+                info = search_place(name) or {}
+                addr = info.get("address")
+                cat_str = info.get("category") or ""
+                if not _want_category(name, cat_str, wanted):
+                    continue
+                url = generate_naver_map_url(name, req.destination, addr)
+                iq = f"{name} {req.destination}"
+                if addr:
+                    iq += f" {addr.split()[0]}"
+                img = _safe_search_image(iq, prefer_food=True, strict=True)
+                places.append(Place(
+                    name=name, category="음식점", address=addr,
+                    rating=info.get("rating"), review_count=info.get("review_count"),
+                    naver_url=url, image_url=img, reviews=[]
+                ))
+            except Exception as loop_e:
+                print("[WARN] restaurants loop:", loop_e); traceback.print_exc()
+                continue
+        return RecommendResponse(places=places)
+    except Exception as e:
+        print("[FATAL] restaurants:", e); traceback.print_exc()
+        return RecommendResponse(places=[])
+
+# ========= (호환) 통합 장소 추천 =========
 @app.post("/api/recommend/places", response_model=RecommendResponse)
 def recommend_places(req: RecommendRequest):
     """
-    네이버 지역검색 기반 랭킹:
-    - 기준점(base_point 또는 도시 대표점)으로부터 거리 + 키워드 적합도로 정렬
-    - 반환: 네이버 지도 링크/거리/점수/이미지(가능 시)
+    관광지+맛집을 한 번에. 새 프론트는 분리 호출 권장.
     """
     try:
-        print("[/api/recommend/places] payload:", req.model_dump())
-
-        # 기준점 결정
-        base = req.base_point
-        if base is None:
-            city = search_place(req.destination)
-            base = (float(city["lat"]), float(city["lng"])) if city else (37.5665, 126.9780)
-
-        query_for_rank = req.query or f"{req.destination} 맛집"
-
-        candidates = search_and_rank_places(
-            prev_lat=base[0],
-            prev_lng=base[1],
-            keyword=query_for_rank,
-            max_distance_km=5.0,
-            display=30,
-        )
-
-        places: List[Place] = []
-        for c in candidates[:20]:
-            addr = c.get("address")
-            naver_url = c.get("naver_url") or generate_naver_map_url(c["name"], req.destination, addr)
-            image_url = _safe_search_image(
-                f"{c['name']} {req.destination} 맛집 {addr.split()[0] if addr else ''}"
-            )
-
-            places.append(
-                Place(
-                    name=c["name"],
-                    category="음식점",
-                    address=addr,
-                    rating=None,
-                    review_count=None,
-                    naver_url=naver_url,
-                    image_url=image_url,
-                    distance_km=c.get("distance_km"),
-                    score=c.get("score"),
-                    reviews=[],
-                )
-            )
-
-        print("[/api/recommend/places] return:", len(places))
-        return RecommendResponse(places=places)
-
-    except Exception as e:
-        print("[/api/recommend/places][ERROR]", repr(e))
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/recommend/attractions", response_model=RecommendResponse)
-def recommend_attractions(req: RecommendRequest):
-    """
-    관광지 전용:
-    - GPT로 후보명 추출(시그니처 자동 감지) → 네이버 검색 검증
-    - URL/이미지 부여
-    """
-    try:
-        print("[/api/recommend/attractions] payload:", req.model_dump())
-
-        seed_prompt = generate_schedule_gpt(
+        prompt = generate_schedule_gpt(
             location=req.destination,
             days=len(req.dates) if req.dates else 3,
             style=", ".join(req.styles) if req.styles else "자유 여행",
@@ -404,105 +612,175 @@ def recommend_attractions(req: RecommendRequest):
             selected_places=req.selected_places,
             travel_date=req.dates[0] if req.dates else str(date.today()),
         )
-
-        gpt_text = _call_ask_gpt(seed_prompt, req.destination)
-        sightseeing, _ = extract_places(gpt_text)
-        print(f"[/api/recommend/attractions] extracted sightseeing={len(sightseeing)}")
+        gpt_text = ask_gpt_safe(prompt, req.destination)
+        sightseeing, restaurants = extract_places(gpt_text or "")
 
         places: List[Place] = []
-        for raw_name in sightseeing:
-            name = re.sub(r"^\d+\.\s*", "", raw_name).split("-")[0].strip()
-            info = search_place(name)
-            addr = info.get("address") if info else None
-            naver_url = generate_naver_map_url(name, req.destination, addr)
-            image_url = _safe_search_image(
-                f"{name} {req.destination} 관광지 {addr.split()[0] if addr else ''}"
-            )
 
-            places.append(
-                Place(
-                    name=name,
-                    category="관광지",
-                    address=addr,
-                    rating=None,
-                    review_count=None,
-                    naver_url=naver_url,
-                    image_url=image_url,
-                    reviews=[],
-                )
-            )
+        # 관광지
+        for raw in sightseeing:
+            try:
+                cleaned = re.sub(r"^\d+\.\s*", "", raw or "")
+                name = (cleaned.split("-")[0] if cleaned else "").strip()
+                if not name:
+                    continue
+                info = search_place(name) or {}
+                addr = info.get("address")
+                url = generate_naver_map_url(name, req.destination, addr)
+                iq = f"{name} {req.destination} 관광지"
+                if addr:
+                    iq += f" {addr.split()[0]}"
+                img = _safe_search_image(iq, prefer_food=False, strict=True)
+                places.append(Place(
+                    name=name, category="관광지", address=addr,
+                    rating=info.get("rating"), review_count=info.get("review_count"),
+                    naver_url=url, image_url=img, reviews=[]
+                ))
+            except Exception:
+                traceback.print_exc()
+                continue
 
-        print("[/api/recommend/attractions] return:", len(places))
+        # 맛집
+        for raw in restaurants:
+            try:
+                cleaned = re.sub(r"^\d+\.\s*", "", raw or "")
+                name = (cleaned.split("-")[0] if cleaned else "").strip()
+                if not name:
+                    continue
+                info = search_place(name) or {}
+                addr = info.get("address")
+                url = generate_naver_map_url(name, req.destination, addr)
+                iq = f"{name} {req.destination}"
+                if addr:
+                    iq += f" {addr.split()[0]}"
+                img = _safe_search_image(iq, prefer_food=True, strict=True)
+                places.append(Place(
+                    name=name, category="음식점", address=addr,
+                    rating=info.get("rating"), review_count=info.get("review_count"),
+                    naver_url=url, image_url=img, reviews=[]
+                ))
+            except Exception:
+                traceback.print_exc()
+                continue
+
         return RecommendResponse(places=places)
 
     except Exception as e:
-        print("[/api/recommend/attractions][ERROR]", repr(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        print("[FATAL] places:", e); traceback.print_exc()
+        return RecommendResponse(places=[])
 
+# ========= 채팅 편집(JSON 강제 + 룰기반 백업) =========
+class ChatRequest(BaseModel):
+    message: str
+    itineraryIndex: int
+    itineraryText: Optional[str] = None
+    context: Optional[Dict] = None  # {"budget": 300000} 등
 
-# ── 채팅 편집 엔드포인트 (신규) ─────────────────────────
-SYSTEM_EDIT = """너는 여행 일정 편집자다.
-입력으로 현재 일정 마크다운과 사용자 요청을 받으면 'JSON 문자열'만 출력한다.
-다른 텍스트 금지. 키는 정확히 reply, updated_itinerary 두 개만 사용.
+class ChatResponse(BaseModel):
+    reply: str
+    updatedItinerary: Optional[str] = None
 
-규칙:
-- 한국어.
-- 일정 포맷(제목 '일정추천 N', 다음 줄에 '---', 3일분 아침/점심/저녁) 유지.
-- 예산이 제공되면 총 예상 비용은 예산의 ±15% 안에서 '일정 마지막에 1번만' 표기.
-- 날짜별 비용 표기 금지.
-- 장소는 실존 명칭 사용.
-반환 예시:
-{"reply":"요청 반영 설명","updated_itinerary":"일정추천 1\\n---\\nDay1 ...\\nDay2 ...\\nDay3 ...\\n\\n총 예상 비용: 270,000원"}
+SYSTEM_EDIT = """
+너는 여행 일정 '편집자'다. 반드시 아래 규칙을 지켜라.
+출력 형식: 오직 JSON 한 줄만! (코드블록/설명/마크다운 금지)
+{
+  "reply": "<간단한 한국어 답변 한 문장>",
+  "updated_itinerary": "<수정이 반영된 전체 일정 텍스트(제목 포함 원래 형식 유지)>"
+}
+편집 원칙:
+- 사용자가 준 '현재 일정' 텍스트를 기계적으로 수정해서 반환한다(새로 생성하지 말 것).
+- 날짜/시간 포맷, 라인 순서, 전체 형식은 그대로 유지.
+- 시간이 바뀌면 '09:00 ~ 10:30' 같은 라인을 실제로 수정.
+- '저녁을 더 가볍게' → 저녁 라인의 장소/설명을 가벼운 식사로 바꾸고 비용을 6,000~10,000원대로 낮춘다.
+- '시간을 X시에' → 해당 구간 시작 시간을 X시로 바꾸고, 종료 시각도 기존 소요시간을 유지하도록 조정한다.
+- 예산 관련 요청은 해당 라인의 '약 xx,xxx원' 숫자도 일관되게 조정.
+- 수정이 없으면 updated_itinerary에 원문을 그대로 넣는다.
 """
 
-def _build_chat_user_prompt(req: ChatRequest) -> str:
-    budget = None
-    if isinstance(req.context, dict):
-        budget = req.context.get("budget")
-    return (
-        f"[선택 인덱스] {req.itineraryIndex}\n\n"
-        f"[현재 일정]\n{req.itineraryText or '(없음)'}\n\n"
-        f"[사용자 요청]\n{req.message}\n\n"
-        f"[예산]\n{budget if budget is not None else '알 수 없음'}"
-    )
+_HOUR_IN_MSG = re.compile(r"(\d{1,2})\s*시")
+
+def _shift_time_span(span: str, new_start_hour: int) -> str:
+    m = re.search(r"(\d{2}):(\d{2})\s*~\s*(\d{2}):(\d{2})", span)
+    if not m:
+        return span
+    sH, sM, eH, eM = map(int, m.groups())
+    dur = (eH*60+eM) - (sH*60+sM)
+    if dur <= 0:
+        dur = 90
+    start = new_start_hour*60 + sM
+    end = start + dur
+    eH2, eM2 = (end//60)%24, end%60
+    return f"{new_start_hour:02d}:{sM:02d} ~ {eH2:02d}:{eM2:02d}"
+
+def _lighten_dinner(line: str) -> str:
+    line = re.sub(r"저녁[^\(]*", "저녁(가벼운 간단식/분식/샐러드)", line)
+    if re.search(r"\d+\s*원", line):
+        line = re.sub(r"(약\s*)?(\d{1,3}(?:,\d{3})+|\d+)\s*원", "약 8,000원", line)
+    else:
+        line += " (약 8,000원)"
+    return line
+
+def _edit_itinerary_rules(text: str, message: str) -> tuple[str, str]:
+    lines = text.splitlines()
+    edited = False
+    reply = "요청을 반영했습니다."
+    m_hour = _HOUR_IN_MSG.search(message)
+    want_hour = None
+    if m_hour:
+        try:
+            h = int(m_hour.group(1))
+            if 0 <= h <= 23:
+                want_hour = h
+        except Exception:
+            pass
+    want_lighter = bool(re.search(r"(가볍게|라이트|light)", message, re.I))
+
+    for i, line in enumerate(lines):
+        if "저녁" not in line:
+            continue
+        if want_hour is not None and re.search(r"\d{2}:\d{2}\s*~\s*\d{2}:\d{2}", line):
+            lines[i] = re.sub(r"\d{2}:\d{2}\s*~\s*\d{2}:\d{2}", lambda m: _shift_time_span(m.group(0), want_hour), line)
+            line = lines[i]
+            edited = True
+            reply = f"저녁 시작 시간을 {want_hour}시로 조정했어요."
+        if want_lighter:
+            lines[i] = _lighten_dinner(line)
+            edited = True
+            reply = "저녁을 가벼운 식사로 바꿨어요(비용도 줄였어요)."
+    return reply, ("\n".join(lines) if edited else text)
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat_edit(req: ChatRequest):
-    """
-    선택한 일정에 대한 편집 대화.
-    반환: { reply, updatedItinerary? }
-    """
-    if not req.message or not req.message.strip():
-        raise HTTPException(status_code=400, detail="message가 비어 있습니다.")
+    original = req.itineraryText or ""
+    backup_reply, backup_text = _edit_itinerary_rules(original, req.message)
 
-    # OpenAI 클라이언트가 없거나 키가 없으면 목업 응답
     if client is None:
-        return ChatResponse(
-            reply=f'(목업) "{req.message}" 요청을 반영했습니다.',
-            updatedItinerary=req.itineraryText or None
-        )
+        return ChatResponse(reply=backup_reply, updatedItinerary=backup_text)
 
     try:
-        messages = [
-            {"role": "system", "content": SYSTEM_EDIT},
-            {"role": "user", "content": _build_chat_user_prompt(req)},
-        ]
         out = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.7,
+            messages=[
+                {"role": "system", "content": SYSTEM_EDIT},
+                {"role": "user", "content":
+                    f"[선택 인덱스] {req.itineraryIndex}\n\n"
+                    f"[현재 일정]\n{original}\n\n"
+                    f"[사용자 요청]\n{req.message}\n\n"
+                    f"[예산]\n{(req.context or {}).get('budget', '알 수 없음')}"
+                },
+            ],
+            temperature=0.3,
+            response_format={"type": "json_object"},  # JSON 강제
         )
-        content = out.choices[0].message.content or ""
-        # 모델은 JSON 문자열만 내도록 시켰지만 안전하게 파싱 보강
+        content = (out.choices[0].message.content or "").strip()
         try:
             data = json.loads(content)
-            reply = (data.get("reply") or "").strip() or "수정했습니다."
-            updated = data.get("updated_itinerary")
-            if isinstance(updated, str):
-                updated = updated.strip() or None
-            return ChatResponse(reply=reply, updatedItinerary=updated)
+            reply = (data.get("reply") or "").strip() or backup_reply
+            updated = (data.get("updated_itinerary") or "").strip()
+            if updated:
+                return ChatResponse(reply=reply, updatedItinerary=updated)
+            return ChatResponse(reply=backup_reply, updatedItinerary=backup_text)
         except Exception:
-            # JSON 파싱 실패 시 원문을 reply로 반환
-            return ChatResponse(reply=content.strip() or "응답 해석 실패")
+            return ChatResponse(reply=backup_reply, updatedItinerary=backup_text)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Chat failed: {e}")
+        return ChatResponse(reply=f"{backup_reply} (모델 오류: {e})", updatedItinerary=backup_text)

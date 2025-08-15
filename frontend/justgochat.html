@@ -5,90 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>추천 일정</title>
   <style>
-    :root {
-      --primary: #0059ff;
-      --text: #000;
-      --muted: #666;
-      --bg: #fff;
-      --panel: #ffffff;
-      --border: #e6e6e6;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Inter, "Apple SD Gothic Neo", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: #f7f7f8;
-      color: var(--text);
-    }
-    .page { max-width: 860px; margin: 0 auto; padding: 16px; }
+    :root { --primary:#0059ff; --text:#000; --muted:#666; --bg:#f7f7f8; --panel:#fff; --border:#e6e6e6; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Inter,"Apple SD Gothic Neo",system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+    .page { max-width:860px; margin:0 auto; padding:16px; }
     .title { display:flex; align-items:center; gap:8px; font-size:22px; font-weight:700; }
-    .subtitle { color: var(--muted); margin: 6px 0 18px; }
+    .subtitle { color:var(--muted); margin:6px 0 8px; }
+    .notice { color:var(--muted); margin-bottom:16px; }
+    .error { color:#c00; margin:10px 0; display:none; }
     .list { display:flex; flex-direction:column; gap:12px; }
 
-    .itinerary-card {
-      background: var(--panel);
-      border: 1px solid #dcdcdc;
-      border-radius: 12px;
-      padding: 16px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,.05);
-      transition: transform .06s ease, box-shadow .12s ease, background .15s ease;
-    }
-    .itinerary-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.08); }
-    .itinerary-card .card-title { font-weight: 700; }
-    .itinerary-card .card-sub { margin-top:6px; color: var(--muted); font-size: 14px; white-space: pre-line; }
+    .itinerary-card { background:var(--panel); border:1px solid #dcdcdc; border-radius:12px; padding:16px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(0,0,0,.05); transition:transform .06s ease, box-shadow .12s ease, background .15s ease; }
+    .itinerary-card:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,.08); }
+    .card-title { font-weight:700; }
+    .card-sub { margin-top:6px; color:var(--muted); font-size:14px; white-space:pre-line; }
 
-    .chat {
-      margin-top: 18px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      display: none; /* 처음엔 숨김 */
-    }
+    .chat { margin-top:18px; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px; display:none; }
     .chat-header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
     .chat-title { font-weight:700; }
     .chat-close { border:none; background:#f2f4f7; padding:6px 10px; border-radius:8px; cursor:pointer; }
-    .chat-log {
-      height: 260px; overflow-y:auto; padding: 8px; border:1px solid var(--border);
-      border-radius: 10px; background:#fafafa;
-    }
-    .msg { margin: 10px 0; display:flex; gap:8px; }
-    .msg.me { justify-content: flex-end; }
-    .bubble {
-      max-width: 80%;
-      padding: 10px 12px; border-radius:14px; line-height:1.4;
-      background:#eef2ff; /* me */
-    }
+    .chat-log { height:260px; overflow-y:auto; padding:8px; border:1px solid var(--border); border-radius:10px; background:#fafafa; }
+    .msg { margin:10px 0; display:flex; gap:8px; }
+    .bubble { max-width:80%; padding:10px 12px; border-radius:14px; line-height:1.4; background:#eef2ff; }
+    .msg.me { justify-content:flex-end; }
     .msg.me .bubble { background:#dbeafe; }
     .msg.bot .bubble { background:#efefef; }
-
-    .chat-input {
-      display:flex; gap:8px; margin-top:10px;
-    }
-    .chat-input input {
-      flex:1; padding:10px 12px; border:1px solid var(--border); border-radius:10px; outline:none;
-      font-size:15px;
-    }
-    .chat-input button {
-      background: var(--primary); color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer;
-    }
-    @media (max-width: 420px) {
-      .chat-log { height: 220px; }
-    }
-    .trip-line { color:#444; font-size:14px; margin-top: 2px; }
+    .chat-input { display:flex; gap:8px; margin-top:10px; }
+    .chat-input input { flex:1; padding:10px 12px; border:1px solid var(--border); border-radius:10px; outline:none; font-size:15px; }
+    .chat-input button { background:var(--primary); color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; }
+    @media (max-width:420px){ .chat-log{height:220px;} }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="title">📅 추천 일정</div>
     <div id="trip-info" class="subtitle"></div>
-    <div class="subtitle">카드를 클릭하면 채팅창이 펼쳐져요.</div>
+    <div class="notice">카드를 클릭하면 채팅창이 펼쳐져요.</div>
+    <div id="error" class="error"></div>
 
-    <!-- 일정 카드 리스트 -->
     <div id="itinerary-list" class="list"></div>
 
-    <!-- 채팅 영역 -->
     <div id="chat" class="chat">
       <div class="chat-header">
         <div class="chat-title" id="chat-title">일정 대화</div>
@@ -104,160 +61,153 @@
 
   <script>
     // ===== 설정 =====
-    const USE_BACKEND = true;           // FastAPI 연결 시 true
-    const CHAT_ENDPOINT = "/api/chat";  // POST { message, itineraryIndex, itineraryText? }
-
-    // ===== 도우미 =====
-    function el(tag, cls, txt) {
-      const e = document.createElement(tag);
-      if (cls) e.className = cls;
-      if (txt) e.textContent = txt;
-      return e;
-    }
-    function addMsg(role, text) {
-      const log = document.getElementById("chat-log");
-      const row = el("div", `msg ${role}`);
-      const bub = el("div", "bubble");
-      bub.innerText = text;
-      row.appendChild(bub);
-      log.appendChild(row);
-      log.scrollTop = log.scrollHeight;
-    }
-    function getLocalTripInfo() {
-      const loc = localStorage.getItem("selectedLocation") || "경주";
-      const dates = JSON.parse(localStorage.getItem("selectedDates") || "[]");
-      const start = dates[0] || "2025-08-13";
-      const end = dates[1] || "2025-08-15";
-      const budget = Number(localStorage.getItem("budget") || "300000").toLocaleString();
-      const styles = JSON.parse(localStorage.getItem("selectedStyles") || "[]");
-      const companions = JSON.parse(localStorage.getItem("selectedCompanions") || "[]");
-      const styleStr = [...companions, ...(localStorage.getItem("hasPet")==="true" ? ["반려동물 동반"] : []), ...styles].join("/");
-      return { loc, start, end, budget, styleStr };
-    }
-    function loadItineraries() {
-      // localStorage.gpt_itineraries = JSON.stringify(["일정추천 1 ...", "일정추천 2 ...", "일정추천 3 ..."])
-      const raw = localStorage.getItem("gpt_itineraries");
-      if (raw) {
-        try {
-          const arr = JSON.parse(raw);
-          if (Array.isArray(arr) && arr.length) return arr.slice(0,3);
-        } catch {}
-      }
-      // 샘플 (상세가 비어 있으면 '세부 내용 없음')
-      return [
-        "일정추천 1 샘플\n---\n(세부 내용 없음)",
-        "일정추천 2 샘플\n---\n(세부 내용 없음)",
-        "일정추천 3 샘플\n---\n(세부 내용 없음)"
-      ];
-    }
+    const API_PLAN = "http://127.0.0.1:8000/api/plan";     // 백엔드가 있으면 이걸로 일정 생성
+    const CHAT_ENDPOINT = "http://127.0.0.1:8000/api/chat"; // 채팅 백엔드
+    const USE_BACKEND_CHAT = true;                           // /api/chat 사용 (없으면 자동 폴백)
 
     // ===== 상태 =====
     let selectedIndex = null;
     let itineraries = [];
 
-    // ===== 초기 렌더 =====
-    document.addEventListener("DOMContentLoaded", () => {
-      const { loc, start, end, budget, styleStr } = getLocalTripInfo();
-      document.getElementById("trip-info").innerText = `경주 · ${start} ~ ${end} · 예산 ${budget}원 · 스타일 ${styleStr || "선택 없음"}`;
+    // ===== 유틸 =====
+    const el = (t,c,x)=>{const e=document.createElement(t); if(c)e.className=c; if(x!==undefined)e.textContent=x; return e;};
+    const $ = (s)=>document.querySelector(s);
+    function addMsg(role, text){
+      const log=$("#chat-log"); const row=el("div",`msg ${role}`); const bub=el("div","bubble"); bub.innerText=text;
+      row.appendChild(bub); log.appendChild(row); log.scrollTop=log.scrollHeight;
+    }
+    function getTripInfo(){
+      const loc=localStorage.getItem("selectedLocation")||"경주";
+      const dates=JSON.parse(localStorage.getItem("selectedDates")||"[]");
+      const start=dates[0]||"2025-08-13"; const end=dates[1]||dates[0]||"2025-08-15";
+      const budgetNum=Number(localStorage.getItem("budget")||300000);
+      const budget=budgetNum.toLocaleString();
+      const styles=JSON.parse(localStorage.getItem("selectedStyles")||"[]");
+      const companions=JSON.parse(localStorage.getItem("selectedCompanions")||"[]");
+      const styleStr=[...companions, ...(localStorage.getItem("hasPet")==="true"?["반려동물 동반"]:[]), ...styles].join("/") || "선택 없음";
+      return {loc:start?localStorage.getItem("selectedLocation")||"경주":"경주", start, end, budget, budgetNum, styles, companions, hasPet:localStorage.getItem("hasPet")==="true", styleStr};
+    }
+    function calcDays(s,e){const S=new Date(s), E=new Date(e||s); const d=Math.round((E-S)/(1000*60*60*24))+1; return isFinite(d)&&d>0?Math.min(Math.max(d,1),10):3;}
+    function loadLocalItins(){
+      const raw=localStorage.getItem("gpt_itineraries");
+      if(raw){ try{const arr=JSON.parse(raw); if(Array.isArray(arr)&&arr.length) return arr.slice(0,3);}catch{} }
+      return ["일정추천 1 샘플\n---\n(세부 내용 없음)","일정추천 2 샘플\n---\n(세부 내용 없음)","일정추천 3 샘플\n---\n(세부 내용 없음)"];
+    }
+    function showError(msg){ const box=$("#error"); box.textContent=msg; box.style.display="block"; }
 
-      itineraries = loadItineraries();
-      const list = document.getElementById("itinerary-list");
-      list.innerHTML = "";
+    // ===== 초기 =====
+    document.addEventListener("DOMContentLoaded", boot);
 
-      itineraries.forEach((text, i) => {
-        const firstLine = (text.split("\n")[0] || `일정추천 ${i+1}`).trim();
-        const rest = text.split("\n").slice(2).join("\n").trim() || "(세부 내용 없음)";
+    async function boot(){
+      const info=getTripInfo();
+      $("#trip-info").innerText=`${localStorage.getItem("selectedLocation")||"경주"} · ${info.start} ~ ${info.end} · 예산 ${info.budget}원 · 스타일 ${info.styleStr}`;
 
-        const card = el("div", "itinerary-card");
-        card.dataset.index = String(i);
+      // 1) 백엔드에서 일정 받아오기 시도
+      let usedBackend=false;
+      try{
+        const days=calcDays(info.start, info.end);
+        const controller=new AbortController();
+        const t=setTimeout(()=>controller.abort(), 6000); // 6초 타임아웃
+        const res=await fetch(API_PLAN,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          signal:controller.signal,
+          body:JSON.stringify({
+            location: localStorage.getItem("selectedLocation")||"경주",
+            days: days,
+            style: (info.styles&&info.styles.length)?info.styles.join(", "):"자유 여행",
+            companions: info.companions||[],
+            budget: info.budgetNum,
+            selected_places: [],
+            travel_date: info.start,
+            count: 3
+          })
+        });
+        clearTimeout(t);
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data=await res.json(); // {schedules:[{title,detail}...]}
+        const arr=data?.schedules;
+        if(!Array.isArray(arr)||!arr.length) throw new Error("schedules 누락");
+        itineraries=arr.slice(0,3).map((s,i)=>`${(s.title||`일정추천 ${i+1}`).trim()}\n---\n${(s.detail||"").trim()}`);
+        usedBackend=true;
+      }catch(e){
+        // 2) 실패하면 로컬 폴백
+        itineraries=loadLocalItins();
+        showError(`(백엔드 사용 불가: ${e.message || e}) 로컬 데이터로 표시합니다.`);
+      }
 
-        const title = el("div", "card-title", firstLine);
-        const sub = el("div", "card-sub", rest.length > 160 ? rest.slice(0,160) + "…" : rest);
+      renderCards();
 
-        card.appendChild(title);
-        card.appendChild(sub);
+      // 백엔드 이용 성공 시 캐시도 업데이트(선택)
+      if(usedBackend){ try{ localStorage.setItem("gpt_itineraries", JSON.stringify(itineraries)); }catch{} }
+    }
+
+    function renderCards(){
+      const list=$("#itinerary-list"); list.innerHTML="";
+      itineraries.forEach((text,i)=>{
+        const firstLine=(text.split("\n")[0]||`일정추천 ${i+1}`).trim();
+        const rest=text.split("\n").slice(2).join("\n").trim()||"(세부 내용 없음)";
+        const card=el("div","itinerary-card"); card.dataset.index=String(i);
+        card.appendChild(el("div","card-title",firstLine));
+        card.appendChild(el("div","card-sub",rest.length>160?rest.slice(0,160)+"…":rest));
+        card.addEventListener("click", onCardClick);
         list.appendChild(card);
       });
+    }
 
-      // 카드 클릭 → 채팅창 오픈
-      list.addEventListener("click", (e) => {
-        const card = e.target.closest(".itinerary-card");
-        if (!card) return;
-        selectedIndex = Number(card.dataset.index);
-        const heading = (itineraries[selectedIndex].split("\n")[0] || `일정추천 ${selectedIndex+1}`).trim();
-        document.getElementById("chat-title").innerText = `💬 ${heading} 대화`;
-        document.getElementById("chat").style.display = "block";
-        const log = document.getElementById("chat-log");
-        log.innerHTML = "";
-        addMsg("bot", `"${heading}" 일정에 대해 무엇을 바꾸고 싶나요?\n예) 2일차 저녁을 더 가볍게, 이동 동선을 더 짧게 등`);
-      });
+    function onCardClick(e){
+      const card=e.currentTarget;
+      selectedIndex=Number(card.dataset.index);
+      const heading=(itineraries[selectedIndex].split("\n")[0]||`일정추천 ${selectedIndex+1}`).trim();
+      $("#chat-title").innerText=`💬 ${heading} 대화`;
+      $("#chat").style.display="block";
+      $("#chat-log").innerHTML="";
+      addMsg("bot", `"${heading}" 일정에 대해 무엇을 바꿀까요?\n예) 2일차 저녁을 더 가볍게, 이동 동선을 더 짧게 등`);
+    }
 
-      // 닫기
-      document.getElementById("chat-close").addEventListener("click", () => {
-        document.getElementById("chat").style.display = "none";
-        selectedIndex = null;
-      });
-
-      // 전송
-      document.getElementById("chat-send").addEventListener("click", sendMessage);
-      document.getElementById("chat-input").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") sendMessage();
-      });
+    // 닫기/전송 리스너
+    document.addEventListener("DOMContentLoaded", ()=>{
+      $("#chat-close").addEventListener("click", ()=>{ $("#chat").style.display="none"; selectedIndex=null; });
+      $("#chat-send").addEventListener("click", sendMessage);
+      $("#chat-input").addEventListener("keydown", (e)=>{ if(e.key==="Enter") sendMessage(); });
     });
 
-    // ===== 전송 로직 =====
-    async function sendMessage() {
-      const input = document.getElementById("chat-input");
-      const msg = input.value.trim();
-      if (!msg) return;
-      if (selectedIndex == null) return;
+    // ===== 채팅 전송 =====
+    async function sendMessage(){
+      const input=$("#chat-input"); const msg=input.value.trim();
+      if(!msg || selectedIndex==null) return;
+      addMsg("me", msg); input.value="";
 
-      addMsg("me", msg);
-      input.value = "";
+      const currentItin=itineraries[selectedIndex];
+      const budgetNum=Number(localStorage.getItem("budget")||0) || null;
 
-      const currentItin = itineraries[selectedIndex];
-
-      if (USE_BACKEND) {
-        try {
-          const res = await fetch(CHAT_ENDPOINT, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+      if(USE_BACKEND_CHAT){
+        try{
+          const res=await fetch(CHAT_ENDPOINT,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
               message: msg,
               itineraryIndex: selectedIndex,
-              itineraryText: currentItin, // 서버에서 이어서 편집하고 싶을 때
+              itineraryText: currentItin,
+              context: { budget: budgetNum }
             })
           });
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          const data = await res.json();
-          // 기대 응답: { reply: "..." , updatedItinerary?: "..." }
-          const reply = (data && (data.reply || data.message)) || "응답을 받지 못했습니다.";
-          addMsg("bot", reply);
-
-          // 서버가 수정된 일정을 보내주면 카드/보관 갱신
-          if (data && data.updatedItinerary) {
-            itineraries[selectedIndex] = data.updatedItinerary;
-            // 카드 요약도 업데이트
-            const list = document.getElementById("itinerary-list");
-            const card = list.querySelector(`.itinerary-card[data-index="${selectedIndex}"]`);
-            if (card) {
-              const firstLine = (data.updatedItinerary.split("\n")[0] || `일정추천 ${selectedIndex+1}`).trim();
-              const rest = data.updatedItinerary.split("\n").slice(2).join("\n").trim() || "(세부 내용 없음)";
-              card.querySelector(".card-title").textContent = firstLine;
-              card.querySelector(".card-sub").textContent = rest.length > 160 ? rest.slice(0,160) + "…" : rest;
-            }
-            // localStorage에도 반영
-            try {
-              localStorage.setItem("gpt_itineraries", JSON.stringify(itineraries));
-            } catch {}
+          if(!res.ok) throw new Error("HTTP "+res.status);
+          const data=await res.json();
+          addMsg("bot", (data && (data.reply || data.message)) || "응답을 받지 못했습니다.");
+          if(data && data.updatedItinerary){
+            itineraries[selectedIndex]=data.updatedItinerary;
+            renderCards();
+            try{ localStorage.setItem("gpt_itineraries", JSON.stringify(itineraries)); }catch{}
           }
           return;
-        } catch (err) {
-          // 폴백으로 내려감
+        }catch(e){
+          showError(`(채팅 백엔드 사용 불가: ${e.message || e}) 임시 응답으로 대체합니다.`);
         }
       }
-      // 백엔드 없거나 실패 시 폴백 응답
-      addMsg("bot", `임시 응답: "${msg}"에 맞춰 일정을 조정할게요. (백엔드 연결 시 실제 GPT 응답으로 대체됩니다)`);
+      // 폴백
+      addMsg("bot", `임시 응답: "${msg}"에 맞춰 일정을 조정할게요. (백엔드 연결 시 실제 GPT 응답으로 대체)`);
     }
   </script>
 </body>
