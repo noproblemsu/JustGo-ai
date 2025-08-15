@@ -99,24 +99,24 @@
     }catch{ return fallback; }
   }
   // 항상 카드가 보이게 하는 로컬 폴백
-  function showFallback(){
+function showFallback(){
     console.warn("[plan] using local fallback");
-    window.itineraries = [
+    itineraries = [
       { title:"일정추천 1 샘플", body:"(세부 내용 없음)", fullText:"일정추천 1 샘플\n---\n(세부 내용 없음)" },
-      { title:"일정추천 2 샘플", body:"(세부 내용 없음)", fullText:"일정추천 2 샘플\n---\n(세부 내용 없음)" },
-      { title:"일정추천 3 샘플", body:"(세부 내용 없음)", fullText:"일정추천 3 샘플\n---\n(세부 내용 없음)" },
+    
     ];
     renderCards();
     try{
-      let warn = $("#backend-warning");
+      let warn = document.querySelector("#backend-warning");
       if (!warn) {
-        warn = el("div", "subtitle");
+        warn = document.createElement("div");
         warn.id = "backend-warning";
+        warn.className = "subtitle";
         warn.style.color = "crimson";
         warn.textContent = "(백엔드 사용 불가 또는 빈 응답) 로컬 데이터로 표시합니다.";
-        $("#subtitle").insertAdjacentElement("afterend", warn);
+        document.querySelector("#subtitle").insertAdjacentElement("afterend", warn);
       }
-    }catch(e){ console.warn("warn banner attach failed:", e); }
+    }catch(e){}
   }
 
   // ===== 상태 =====
@@ -190,7 +190,7 @@
             companions, budget: currentBudget,
             selected_places: [],
             travel_date,
-            count: 3
+            count: 1
           })
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
