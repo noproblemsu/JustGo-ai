@@ -202,12 +202,14 @@ function showFallback(){
           return showFallback();
         }
 
-        itineraries = list.slice(0,3).map(s => {
-          const title = (s.title || "일정추천").split("\n")[0].trim();
-          const body = (s.detail || "").trim();
-          const fullText = `${title}\n---\n${body}`;
-          return { title, body, fullText };
-        });
+        // 기존에 혹시 있었던 .slice(0,3) 제거!
+      itineraries = (Array.isArray(data.schedules) ? data.schedules : []).map(s => {
+        const title = (s.title || "일정추천").split("\n")[0].trim();
+        const body = (s.detail || "").trim();
+        const fullText = `${title}\n---\n${body}`;
+        return { title, body, fullText };
+      });
+
 
         renderCards();
         $("#backend-warning")?.remove();
