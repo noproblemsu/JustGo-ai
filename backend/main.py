@@ -87,12 +87,12 @@ def _model_to_dict(m):
 def ask_gpt_safe(prompt: str, destination: Optional[str] = None) -> str:
     """프로젝트별 ask_gpt 시그니처 차이를 흡수하는 래퍼."""
     try:
-        return _ask_gpt(prompt, destination=destination)
+        return ask_gpt(prompt, destination=destination)
     except TypeError:
         try:
-            return _ask_gpt(prompt, destination)
+            return ask_gpt(prompt, destination)  # 구버전 시그니처
         except TypeError:
-            return _ask_gpt(prompt)
+            return ask_gpt(prompt)               # 매개변수 하나만 받는 경우
 
 def _normalize_gpt_text(text: str) -> str:
     text = (text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
@@ -205,6 +205,113 @@ def _replace_line_with_real_place(line: str, city: str) -> str:
         return f"{time_span} {cand_name}" + (f" ({addr})" if addr else "")
     except Exception:
         return line
+
+# ========= 실제 장소 검증/치환 유틸 (추가) =========
+_HTML_TAG = re.compile(r"<[^>]+>")
+
+def _clean_html(s: str) -> str:
+    return _HTML_TAG.sub("", s or "").strip()
+
+def _best_place(city: str, name_or_keyword: str) -> dict:
+    """
+    네이버 장소 검색에서 첫 결과만 가져오되, None 안전 처리.
+    name_or_keyword는 '경주 대릉원' 같은 구체명 or '경주 관광지' 같은 키워드.
+    """
+    try:
+        q = f"{city} {name_or_keyword}".strip()
+        info = search_place(q) or {}
+        # key 정리(실제 구현체에 따라 name/title 중 하나만 있을 수 있음)
+        info_name = _clean_html(info.get("name") or info.get("title") or "")
+        if not info_name:
+            return {}
+        info["__resolved_name"] = info_name
+        return info
+    except Exception:
+        return {}
+
+_CAT_HINTS = [
+    (re.compile(r"(아침|브런치)", re.I), "브런치 카페"),
+    (re.compile(r"(점심|식사|런치)", re.I), "맛집"),
+    (re.compile(r"(저녁|디너)", re.I), "맛집"),
+    (re.compile(r"(카페|디저트|휴식)", re.I), "카페"),
+    (re.compile(r"(관광|명소|체험|산책|공원|박물관|전시|유적|사찰)", re.I), "관광지"),
+]
+
+def _guess_keyword_from_line(rest: str) -> str:
+    for rx, kw in _CAT_HINTS:
+        if rx.search(rest or ""):
+            return kw
+    return "관광지"
+
+_TS_RE = re.compile(r"^\s*(\d{2}:\d{2}\s*~\s*\d{2}:\d{2})\s+(.+?)\s*$")
+
+def _verify_and_enrich_line(line: str, city: str) -> str:
+    """
+    '09:00 ~ 11:00 XX' 형태의 라인에서 XX가 실제 장소인지 확인하고
+    주소가 없다면 주소를 붙여서 반환. 검색 실패 시 카테고리 키워드로 대체.
+    비용(약 x원) 같은 문구는 유지.
+    """
+    m = _TS_RE.match(line)
+    if not m:
+        return line
+
+    span, rest = m.groups()
+    # (가격/주소) 괄호부를 떼서 core name만 얻기
+    core = rest.split("(")[0].strip()
+
+    # 1) 정확명으로 검색
+    info = _best_place(city, core)
+
+    # 2) 실패하면 카테고리 힌트로 대체 후보 검색
+    if not info:
+        kw = _guess_keyword_from_line(rest)
+        info = _best_place(city, kw)
+
+    # 3) 그래도 실패하면 원문 라인 반환
+    if not info:
+        return line
+
+    name = info.get("__resolved_name") or core
+    addr = (info.get("address") or "").strip()
+    # 기존 라인에서 ( ... ) 괄호에 이미 주소/가격이 섞여 있을 수 있으니, 괄호부에서 '원' 가격만 추출하고 주소는 새로 붙임
+    # 가격 부분만 남기기
+    price_part = None
+    m_price = re.search(r"(약\s*\d{1,3}(?:,\d{3})+|\d+)\s*원", rest)
+    if m_price:
+        # ' (약 12,000원)' 형태로 붙일 수 있게 보관
+        price_txt = m_price.group(0)
+        price_part = f" {price_txt}" if price_txt.startswith("약") else f" 약 {price_txt}"
+
+    # 주소를 괄호로, 가격은 뒤에 같이 붙임
+    if addr:
+        enriched = f"{span} {name} ({addr})"
+    else:
+        enriched = f"{span} {name}"
+
+    if price_part and price_part.strip():
+        # 이미 괄호가 있다면 그대로 두고, 없다면 뒤에 가격만 추가 (중복 방지)
+        if "원)" in enriched or "원" in enriched:
+            return enriched
+        return enriched + f" ({price_part.strip()})"
+
+    return enriched
+
+def verify_and_enrich_block(detail: str, city: str) -> str:
+    """
+    일정 블록 전체를 실제 장소 기반으로 보강.
+    - 각 타임라인 라인을 검증/치환
+    - 주소가 없으면 주소 추가
+    """
+    lines = (detail or "").splitlines()
+    out = []
+    for ln in lines:
+        # 주소/비용이 이미 충분히 붙어 있더라도 verify 한 번은 해보면서 이름 정합성 맞춤
+        if _TIME_RE.search(ln):
+            out.append(_verify_and_enrich_line(ln, city))
+        else:
+            out.append(ln)
+    return "\n".join(out).strip()
+
 
 # ========= 스키마 =========
 class ScheduleRequest(BaseModel):
@@ -393,18 +500,18 @@ def create_plan(req: ScheduleRequest):
             fixed_lines: list[str] = []
             for line in (detail.splitlines() or []):
                 if line_has_address(line) or line_has_cost(line):
-                    fixed_lines.append(line)
+                 fixed_lines.append(line)
                 elif line_looks_like_placeholder(line):
                     fixed_lines.append(_replace_line_with_real_place(line, req.location))
                 else:
                     fixed_lines.append(line)
-            detail = "\n".join(fixed_lines).strip() or _build_sample_itinerary(req.location, req.travel_date, req.days, title)
+            detail = verify_and_enrich_block(detail, req.location)
 
             # (3) 품질 가드(너무 짧거나 '...' 위주, 시간 구간 부족, 날짜 미포함 등)
             time_spans = _TIME_RE.findall(detail)
             has_any_date = any((fd in detail) or (sd in detail) for fd, sd in zip(full_dates, short_dates))
             if (len(detail) < 140) or (len(time_spans) < 2) or ("..." in detail) or ("…") in detail or (not has_any_date):
-                detail = _build_sample_itinerary(req.location, req.travel_date, req.days, title)
+                detail = verify_and_enrich_block(detail, req.location)
 
             # (4) 총비용 문구 제거 → 재계산 후 1회만 표기
             detail = re.sub(r"총 예상 비용.*?원\W*", "", detail)
