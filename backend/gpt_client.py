@@ -114,7 +114,7 @@ def ask_gpt(prompt: str, destination: str | None = None) -> str:
 def extract_places(text: str):
     """
     너의 기존 구현을 유지하기 위해 남겨둔 헬퍼.
-    간단히 줄 리스트를 두 그룹으로 나눠서 반환.
+    간단히 줄 리스트를 두 그룹으로 나눠서 반환!
     """
     sightseeing, restaurants = [], []
     current = None
