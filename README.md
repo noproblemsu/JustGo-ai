@@ -56,7 +56,7 @@
   * 날짜 선택: **Flatpickr (MIT)**
   * 폰트: **Istok Web (OFL 1.1)**
   * 네트워킹: **fetch (브라우저 내장)**
-  * Swiper (MIT): **카드 슬라이드 UI**
+  * 카드 슬라이드 UI: **Swiper (MIT)**
 * **데이터 흐름**: 입력값은 `localStorage`에 임시 저장 후 **FastAPI** 백엔드로 전송합니다.
 
 > 사용 오픈소스: **Flatpickr(MIT)**, **Istok Web(OFL)**, **Swiper (MIT)**
