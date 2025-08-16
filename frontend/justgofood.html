@@ -2,74 +2,467 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>JustGo 근처 맛집 추천</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="stylesheet" href="./style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>맛집 추천</title>
   <style>
-    .place-card{background:#fff;border:1px solid #e6e6e6;border-radius:12px;padding:12px;margin:10px 0;}
-    .place-title{font-weight:700;margin-bottom:6px}
-    .btn{border:1px solid #0055ff;padding:10px 14px;border-radius:10px;background:#eef3ff;cursor:pointer}
-    img{border-radius:8px;max-width:100%}
+    :root {
+      --text-primary: #000;
+      --text-secondary: rgba(0, 0, 0, 0.5);
+      --text-subtle: #828282;
+      --text-white: #fff;
+      --bg-main: #fff;
+      --bg-light-gray: #f5f5f5;
+      --border-color: #e6e6e6;
+      --primary-blue: #0059ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', 'Istok Web', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+    }
+    .page-container {
+      max-width: 393px;
+      margin: 0 auto;
+      padding: 40px 16px 180px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    /* 여행지 미선택 경고 */
+    #location-warning {
+      display:none; padding:16px; background:#fff3f3; border:1px solid #ffcccc;
+      border-radius:8px; text-align:center; color:#cc0000;
+    }
+    #go-select-location {
+      margin-top:8px; padding:8px 16px; background:#0059ff; color:#fff; border:none; border-radius:6px; font-size:14px; cursor:pointer;
+    }
+
+    /* 고정 헤더 */
+    .fixed-header {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: #fff; z-index: 100;
+      max-width: 393px; margin: 0 auto;
+      padding: 50px 16px 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .main-title { font-weight: 700; font-size: 30px; line-height: 1.44; margin: 0; }
+
+    /* 카테고리 캐러셀 */
+    .category-carousel {
+      display: flex; gap: 24px; overflow-x: auto; padding: 12px 0; margin-top: 125px;
+      -ms-overflow-style: none; scrollbar-width: none;
+    }
+    .category-carousel::-webkit-scrollbar { display: none; }
+    .category-item { display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0; cursor:pointer; }
+    .category-image { width:76px; height:76px; border-radius:50%; object-fit:cover; transition: opacity .2s ease; }
+    .category-image.inactive { opacity:.5; }
+    .category-label, .category-label-active { font-weight:500; font-size:14px; text-align:center; margin:0; }
+    .category-label { color:#828282; }
+    .category-label-active { color:#161823; }
+
+    /* 툴바 */
+    .filter-bar { display:flex; justify-content:space-between; align-items:center; padding:0 8px; margin-top:.5px; }
+    .select-wrapper { position:relative; display:inline-block; margin-right:25px; }
+    .sort-select {
+      font-size:12px; padding:6px 30px 6px 12px; border-radius:6px; border:1px solid var(--border-color);
+      appearance:none; background:#fff; background-repeat:no-repeat; background-position:right 10px center; background-size:12px; width:120px;
+    }
+    .select-arrow {
+      position:absolute; right:12px; top:50%; transform:translateY(-50%); width:10px; height:6px;
+      background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-size:contain; pointer-events:none;
+    }
+    .result-count { font-size:14px; margin-top:4px; color:var(--text-secondary); }
+
+    /* 리스트 영역 */
+    .listings-container { display:flex; flex-direction:column; gap:16px; }
+    .location-card { display:flex; flex-direction:column; gap:10px; }
+    .image-carousel { width:100%; }
+    .place-img { width:100%; height:200px; object-fit:cover; border-radius:12px; background:#eee; display:block; }
+    .location-info { display:flex; flex-direction:column; gap:8px; }
+    .location-name { font-weight:600; font-size:15px; margin:0; }
+    .meta-info { display:flex; gap:12px; color:var(--text-secondary); font-size:14px; flex-wrap:wrap; }
+    .price-cta { display:flex; justify-content:space-between; align-items:center; }
+    .select-btn {
+      background:#111; color:#fff; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:14px;
+    }
+    .select-btn.selected { background: var(--primary-blue); }
+
+    /* 푸터 */
+    .page-footer {
+      position: sticky; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 393px; background: #fff; padding: 16px;
+      display:flex; flex-direction:column; align-items:center; gap:12px;
+      border-top: 1px solid var(--border-color);
+    }
+    .action-button { background: var(--primary-blue); color:#fff; border:none; border-radius:8px; width:100%; padding:14px; font-size:18px; font-weight:700; cursor:pointer; }
+    .skip-link { font-size:12px; color:#000; text-decoration:none; }
+    .empty-hint { padding:16px; color:#888; }
   </style>
 </head>
 <body>
-  <main style="max-width:680px;margin:24px auto;padding:0 16px;">
-    <h1>🍜 근처 맛집 추천</h1>
+  <main class="page-container">
 
-    <section style="display:flex;gap:8px;align-items:center;">
-      <input id="recommendQuery" placeholder="예: 2일차 점심 일식" style="flex:1;padding:10px">
-      <button id="recommendPlacesBtn" class="btn">추천 받기</button>
-    </section>
+    <!-- 여행지 경고 -->
+    <div id="location-warning">
+      <p style="margin:0 0 8px;">⚠️ 여행지를 먼저 선택해주세요.</p>
+      <button id="go-select-location">여행지 선택하러 가기</button>
+    </div>
 
-    <small style="display:block;margin:8px 0;color:#666;">※ 직전 생성된 일정의 첫 장소 기준으로 반경 5km 내 랭킹 추천</small>
+    <!-- 고정 헤더 -->
+    <div class="fixed-header" id="fixed-header">
+      <h1 class="main-title">방문하고 싶은<br>음식점을 선택해주세요.</h1>
+    </div>
 
-    <section id="recommendPlacesResult"></section>
+    <!-- 음식 카테고리 -->
+    <div class="category-carousel">
+      <div class="category-item" data-category="한식">
+        <img src="justgoimages/hansik.jpg" alt="한식" class="category-image">
+        <p class="category-label-active">한식</p>
+      </div>
+      <div class="category-item" data-category="양식">
+        <img src="justgoimages/yangsik.jpg" alt="양식" class="category-image inactive">
+        <p class="category-label">양식</p>
+      </div>
+      <div class="category-item" data-category="중식">
+        <img src="justgoimages/china.jpg" alt="중식" class="category-image inactive">
+        <p class="category-label">중식</p>
+      </div>
+      <div class="category-item" data-category="일식">
+        <img src="justgoimages/japan.jpg" alt="일식" class="category-image inactive">
+        <p class="category-label">일식</p>
+      </div>
+      <div class="category-item" data-category="카페">
+        <img src="justgoimages/cafe.jpg" alt="카페" class="category-image inactive">
+        <p class="category-label">카페</p>
+      </div>
+      <div class="category-item" data-category="패스트푸드">
+        <img src="justgoimages/chicken.jpg" alt="패스트푸드" class="category-image inactive">
+        <p class="category-label">패스트푸드</p>
+      </div>
+    </div>
+
+    <!-- 드롭다운 + 결과 개수 -->
+    <div class="filter-bar">
+      <div class="select-wrapper">
+        <select class="sort-select" id="food-sort">
+          <option value="review">리뷰 많은 순</option>
+          <option value="rating">평점 높은 순</option>
+          <!-- 거리 순을 쓰려면 centerLat/centerLng 저장 필요
+          <option value="distance">거리 순</option>
+          -->
+        </select>
+        <span class="select-arrow"></span>
+      </div>
+      <p class="result-count">결과 0개</p>
+    </div>
+
+    <!-- 결과 카드 영역 -->
+    <section class="listings-container" id="food-results"></section>
   </main>
 
-  <script type="module">
-    import { apiRecommendPlaces } from "./js/api.js";
+  <!-- 푸터 버튼 -->
+  <footer class="page-footer">
+    <button class="action-button" id="done-btn">완료</button>
+    <a href="#" class="skip-link" id="skip-link">다음에 하기</a>
+  </footer>
 
-    const $btn = document.getElementById("recommendPlacesBtn");
-    const $out = document.getElementById("recommendPlacesResult");
-    const $query = document.getElementById("recommendQuery");
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
 
-    $btn?.addEventListener("click", async ()=>{
-      try{
-        $btn.disabled = true;
+    // 요소 참조
+    const categoryItems = document.querySelectorAll('.category-item');
+    const resultCount   = document.querySelector('.result-count');
+    const container     = document.getElementById('food-results');
+    const sortSelect    = document.getElementById('food-sort');
+    const warningBox    = document.getElementById('location-warning');
+    const fixedHeader   = document.getElementById('fixed-header');
 
-        const destination = localStorage.getItem("selectedLocation") || "";
-        const dates = JSON.parse(localStorage.getItem("selectedDates") || "[]");
-        const base_point = JSON.parse(localStorage.getItem("lastBasePoint") || "null");
+    // 상태/캐시
+    let selectedCategory = "한식";
+    const cache = Object.create(null); // key: `${cat}|${sort}`
 
-        if(!destination){ alert("먼저 일정 생성 페이지에서 여행지를 설정하세요."); $btn.disabled=false; return; }
+    // 백엔드 카테고리 매핑(6종)
+    // 분식/치킨/피자는 패스트푸드로 묶어 API 호출
+    const CATEGORY_TO_API = {
+      "한식": "한식",
+      "양식": "양식",
+      "중식": "중식",
+      "일식": "일식",
+      "카페": "카페",
+      "분식": "패스트푸드",
+      "치킨": "패스트푸드",
+      "피자": "패스트푸드",
+      "패스트푸드": "패스트푸드"
+    };
 
-        const data = await apiRecommendPlaces({
-          destination,
-          dates,
-          base_point,                     // 없으면 서버가 도시 중심으로 처리
-          query: $query.value.trim() || `${destination} 맛집`
+    // 세부 하위 필터(패스트푸드 내 세분화)
+    const SUB_FILTER = {
+      "분식": ["분식","떡볶이","tteok","tteokbokki","김밥","kimbap","순대","튀김","라볶이","떡"],
+      "치킨": ["치킨","양념치킨","프라이드","후라이드","치킨호프","KFC","호프"],
+      "피자": ["피자","pizza","pizzeria","도미노","파파존스","피자헛","미스터피자","domino"]
+    };
+
+    // 여행지 입력 확인
+    function ensureLocation() {
+      const loc = localStorage.getItem("selectedLocation");
+      if (!loc || loc === "여행지") {
+        warningBox.style.display = "block";
+        fixedHeader.style.display = "none";
+        document.querySelector(".page-footer").style.display = "none";
+        return false;
+      }
+      warningBox.style.display = "none";
+      fixedHeader.style.display = "block";
+      document.querySelector(".page-footer").style.display = "flex";
+      return true;
+    }
+    document.getElementById("go-select-location")?.addEventListener("click", () => {
+      location.href = "justgowhere.html";
+    });
+
+    function showLoading() {
+      container.innerHTML = `<div class="empty-hint">불러오는 중...</div>`;
+      resultCount.textContent = "결과 0개";
+    }
+    function showEmpty(msg="추천 결과가 아직 없어요.") {
+      container.innerHTML = `<div class="empty-hint">${msg}</div>`;
+      resultCount.textContent = "결과 0개";
+    }
+
+    // 지도 검색 URL 통일
+    function buildNaverMapUrl(p) {
+      const loc = localStorage.getItem("selectedLocation") || "";
+      const addrToken = (p.address || "").split(" ")[0] || "";
+      const query = [p.name || "", loc, addrToken].filter(Boolean).join(" ");
+      return "https://map.naver.com/v5/search/" + encodeURIComponent(query);
+    }
+
+    // 렌더
+    function renderCards(places) {
+      container.innerHTML = "";
+
+      // 중복 제거(이름 기준)
+      const uniq = [];
+      const seen = new Set();
+      (places || []).forEach(p => {
+        const key = (p.name || "").trim();
+        if (key && !seen.has(key)) { seen.add(key); uniq.push(p); }
+      });
+
+      // 정렬(프론트 보정)
+      const list = [...uniq];
+      const sort = sortSelect?.value || "review";
+      if (sort === "rating") {
+        list.sort((a,b) => (b.rating || 0) - (a.rating || 0));
+      } else if (sort === "distance") {
+        list.sort((a,b) => {
+          const da = (a.distance_km == null) ? 9999 : a.distance_km;
+          const db = (b.distance_km == null) ? 9999 : b.distance_km;
+          return da - db;
         });
+      } else {
+        list.sort((a,b) => (b.review_count || 0) - (a.review_count || 0));
+      }
 
-        $out.innerHTML = data.places.length
-          ? data.places.map(p => `
-              <div class="place-card">
-                <div class="place-title"><a href="${p.naver_url||'#'}" target="_blank">${p.name}</a></div>
-                ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : ""}
-                <div class="place-meta" style="color:#333;font-size:14px;line-height:1.6;">
-                  ${p.address ? `주소: ${p.address}<br>` : ""}
-                  ${p.distance_km != null ? `거리: ${p.distance_km}km<br>` : ""}
-                  ${p.score != null ? `점수: ${p.score}<br>` : ""}
-                </div>
-              </div>
-            `).join("")
-          : `<div>추천 결과가 비어있어요.</div>`;
-      }catch(err){
-        console.error(err);
-        $out.innerHTML = `<div style="color:#c00;">요청 실패: ${err.message}</div>`;
-      }finally{
-        $btn.disabled = false;
+      resultCount.textContent = `결과 ${list.length}개`;
+
+      if (!list.length) {
+        showEmpty();
+        return;
+      }
+
+      list.forEach(p => {
+        const q = `${p.name || ""} ${localStorage.getItem("selectedLocation") || ""}`.trim();
+        const img =
+          p.image_url || p.imageUrl ||
+          `https://source.unsplash.com/600x400/?${encodeURIComponent(q)}`;
+        const ratingText = (p.rating != null) ? p.rating : "-";
+        const reviewText = (p.review_count != null) ? `${p.review_count}개` : "리뷰 정보 없음";
+        const addrText   = p.address || "";
+        const mapUrl     = buildNaverMapUrl(p);
+
+        const card = document.createElement("article");
+        card.className = "location-card";
+        card.dataset.mapurl = mapUrl;
+
+        card.innerHTML = `
+          <div class="image-carousel">
+            <a class="map-link" href="${mapUrl}" target="_blank" rel="noopener" aria-label="네이버 지도에서 보기">
+              <img class="place-img" src="${img}" alt="${p.name || ""}" loading="lazy" decoding="async" />
+            </a>
+          </div>
+          <div class="location-info">
+            <p class="location-name">${p.name || ""}</p>
+            <div class="meta-info">
+              <div class="rating"><span>⭐</span> <span>${ratingText} (${reviewText})</span></div>
+              <div>${addrText}</div>
+            </div>
+            <div class="price-cta">
+              <div><a class="map-link" href="${mapUrl}" target="_blank" rel="noopener">지도</a></div>
+              <button class="select-btn">선택</button>
+            </div>
+          </div>
+        `;
+        const imgEl = card.querySelector(".place-img");
+        imgEl.onerror = () => { imgEl.src = `https://picsum.photos/seed/${encodeURIComponent(q)}/600/400`; };
+
+        container.appendChild(card);
+      });
+
+      // 선택 토글
+      container.querySelectorAll(".select-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          btn.classList.toggle("selected");
+          btn.textContent = btn.classList.contains("selected") ? "선택됨" : "선택";
+        });
+      });
+    }
+
+    // 하위(세부) 필터 적용
+    function applySubFilter(cat, places) {
+      const kws = SUB_FILTER[cat];
+      if (!kws) return places;
+      const keys = kws.map(k => k.toLowerCase());
+      return (places || []).filter(p => {
+        const name = (p.name || "").toLowerCase();
+        const catStr = (p.category || "").toLowerCase();
+        return keys.some(k => name.includes(k) || catStr.includes(k));
+      });
+    }
+
+    // API 호출 (네이버 지도 기반 전용)
+    async function fetchRestaurantsByCategory(cat) {
+      const apiCat = CATEGORY_TO_API[cat] || cat;
+
+      // '패스트푸드'는 검색어를 풍성하게
+      let cuisineForQuery = apiCat;
+      if (apiCat === "패스트푸드") {
+        cuisineForQuery = "패스트푸드 분식 치킨 피자 버거 샌드위치";
+      }
+
+      const payload = {
+        destination: localStorage.getItem('selectedLocation') || '서울',
+        cuisine: cuisineForQuery,                      // 한식/양식/중식/일식/카페/패스트푸드(확장 키워드)
+        sort: sortSelect.value || 'review',           // review | rating | distance
+        limit: 12,
+        companions: JSON.parse(localStorage.getItem('selectedCompanions') || '[]'),
+        styles: JSON.parse(localStorage.getItem('selectedStyles') || '[]'),
+        hasPet: localStorage.getItem('hasPet') === 'true',
+        center_lat: Number(localStorage.getItem('centerLat')) || null,
+        center_lng: Number(localStorage.getItem('centerLng')) || null,
+      };
+
+      console.log("[food] payload:", payload);
+
+      try {
+        // ✅ GPT 경유 X, 네이버 지도 기반 엔드포인트
+        const res = await fetch(`${API_BASE}/api/food/recommend`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json().catch(() => ({}));
+        let places = data.items || data.places || [];
+        // 세부 필터(분식/치킨/피자 선택 시)
+        places = applySubFilter(cat, places);
+        console.log(`[food] backend→render (${cat}/${apiCat}):`, places.slice(0, 3));
+        return places;
+      } catch (e) {
+        console.error("음식점 API 에러:", e);
+        return [];
+      }
+    }
+
+    // 카테고리 UI 상태
+    function activateCategoryItem(item) {
+      document.querySelectorAll('.category-item').forEach(i => {
+        i.querySelector('img').classList.add('inactive');
+        const p = i.querySelector('p');
+        if (p) p.className = 'category-label';
+      });
+      item.querySelector('img').classList.remove('inactive');
+      const p = item.querySelector('p');
+      if (p) p.className = 'category-label-active';
+    }
+
+    async function handleCategoryChange(cat, item) {
+      if (!ensureLocation()) return;
+      selectedCategory = cat;
+      activateCategoryItem(item);
+      showLoading();
+
+      const cacheKey = `${cat}|${sortSelect.value || 'review'}`;
+      if (!cache[cacheKey]) {
+        cache[cacheKey] = await fetchRestaurantsByCategory(cat);
+      }
+      renderCards(cache[cacheKey]);
+    }
+
+    // 이벤트: 카테고리 클릭
+    categoryItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const cat = item.getAttribute('data-category');
+        if (cat && cat !== selectedCategory) {
+          handleCategoryChange(cat, item);
+        }
+      });
+    });
+
+    // 정렬 변경 → 현재 카테고리 재호출(캐시 분리)
+    sortSelect.addEventListener("change", async () => {
+      const item = document.querySelector(`.category-item[data-category="${selectedCategory}"]`);
+      await handleCategoryChange(selectedCategory, item);
+    });
+
+    // 완료: 선택된 맛집 저장 + 카테고리 저장
+    document.getElementById("done-btn").addEventListener("click", () => {
+      const selected = [];
+      document.querySelectorAll(".location-card").forEach(card => {
+        const btn = card.querySelector(".select-btn");
+        if (btn && btn.classList.contains("selected")) {
+          const name = card.querySelector(".location-name")?.textContent?.trim();
+          if (name) selected.push(name);
+        }
+      });
+      localStorage.setItem("selectedRestaurants", JSON.stringify(selected));
+      localStorage.setItem("selectedFoodCategory", selectedCategory);
+      localStorage.setItem('selectedLocation','서울');
+
+      location.href = "justgoset.html";
+    });
+
+    // 다음에 하기
+    document.getElementById("skip-link").addEventListener("click", (e) => {
+      e.preventDefault();
+      localStorage.setItem("skipRecommendation", "true");
+      location.href = "justgoset.html";
+    });
+
+    // 안전장치: 어떤 링크든 지도 링크로 강제
+    container.addEventListener("click", (e) => {
+      const a = e.target.closest("a");
+      if (!a) return;
+      if (!a.href.includes("map.naver.com")) {
+        e.preventDefault();
+        const card = a.closest(".location-card");
+        const url = card?.dataset.mapurl || "https://map.naver.com/v5/";
+        window.open(url, "_blank", "noopener");
       }
     });
+
+    // 초기 구동
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!ensureLocation()) return;
+      const firstItem = document.querySelector('.category-item[data-category="한식"]');
+      handleCategoryChange("한식", firstItem);
+      document.querySelector('.category-carousel').scrollLeft = 0;
+    });
   </script>
+
 </body>
 </html>
