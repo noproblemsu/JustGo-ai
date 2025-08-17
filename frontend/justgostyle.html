@@ -5,15 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>여행 스타일 선택</title>
   <style>
+/**********************************************/
     body {
-      margin: 0;
-      font-family: 'Istok Web', sans-serif;
-      background-color: #f0f0f0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
+  margin: 0;
+  font-family: 'Istok Web', sans-serif;
+  background-color: #f0f0f0;
+  display: flex;
+  justify-content: center;   /* ✅ 가로는 가운데 */
+  align-items: flex-start;   /* ✅ 세로는 위쪽 */
+  min-height: 100vh;
+}
+/*******************************************/
     * {
       box-sizing: border-box;
     }
@@ -192,96 +194,159 @@
 
 
 <script>
+  /////////////////////////////////////////////////////
   const urlParams = new URLSearchParams(window.location.search);
 const fromPage = urlParams.get("from");
 
-  // 태그 버튼 토글
-  const tagButtons = document.querySelectorAll('.tag-button');
-  tagButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      button.classList.toggle('selected');
+// 태그 버튼 토글
+const tagButtons = document.querySelectorAll('.tag-button');
+tagButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    button.classList.toggle('selected');
+  });
+});
+
+// 슬라이더 기능
+ const sliderTrack  = document.getElementById('sliderTrack');
+  const sliderHandle = document.getElementById('sliderHandle');
+
+  // [추가] 앵커(퍼센트) & 라벨
+  const ANCHORS = [0, 50, 100];
+  const LABELS  = ['light', 'medium', 'hard'];
+
+  // 현재 상태
+  let sliderPercent = 50;          // 0 | 50 | 100
+  let sliderCategory = 'medium';   // 'light' | 'medium' | 'hard'
+
+  // 핸들 위치 설정
+  function setHandle(pct) {
+    sliderHandle.style.left = `${pct}%`;
+    sliderPercent = Math.round(pct);
+  }
+
+  // 좌표 → 퍼센트
+  function percentFromClientX(clientX) {
+    const rect = sliderTrack.getBoundingClientRect();
+    let x = clientX - rect.left;
+    x = Math.max(0, Math.min(x, rect.width));
+    return (x / rect.width) * 100;
+  }
+
+  // [추가] 가장 가까운 앵커로 스냅
+  function snapToNearest(pct) {
+    let nearestIdx = 0;
+    let minDiff = Infinity;
+    ANCHORS.forEach((a, i) => {
+      const d = Math.abs(a - pct);
+      if (d < minDiff) { minDiff = d; nearestIdx = i; }
     });
+    setHandle(ANCHORS[nearestIdx]);
+    sliderCategory = LABELS[nearestIdx];
+  }
+
+  // [수정] 드래그: 이동은 자유, 마우스 업 시 스냅
+  sliderHandle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const onMove = (ev) => setHandle(percentFromClientX(ev.clientX));
+    const onUp   = (ev) => {
+      snapToNearest(percentFromClientX(ev.clientX));
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   });
 
-  // 슬라이더 기능
-  const sliderTrack = document.getElementById('sliderTrack');
-  const sliderHandle = document.getElementById('sliderHandle');
-  let sliderValue = 0;
+  // [추가] 트랙 클릭 시 즉시 스냅
+  sliderTrack.addEventListener('click', (e) => {
+    snapToNearest(percentFromClientX(e.clientX));
+  });
 
-  sliderHandle.addEventListener('mousedown', startDrag);
-  sliderTrack.addEventListener('click', jumpTo);
+  // [추가] 터치 지원
+  sliderHandle.addEventListener('touchstart', (e) => {
+    const onMove = (ev) => {
+      const t = ev.touches[0];
+      setHandle(percentFromClientX(t.clientX));
+    };
+    const onEnd = (ev) => {
+      const t = (ev.changedTouches && ev.changedTouches[0]) || null;
+      if (t) snapToNearest(percentFromClientX(t.clientX));
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+    };
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+  }, { passive: false });
 
-  function startDrag(e) {
-    e.preventDefault();
-    document.addEventListener('mousemove', onDrag);
-    document.addEventListener('mouseup', stopDrag);
-  }
+  sliderTrack.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    snapToNearest(percentFromClientX(t.clientX));
+  }, { passive: true });
 
-  function onDrag(e) {
-    const rect = sliderTrack.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    x = Math.max(0, Math.min(x, rect.width));
-    const percent = (x / rect.width) * 100;
+// ✅ 기존 저장값 복원 (justgoset에서 온 경우만)
+if (fromPage === "justgoset.html") {
+  const savedCompanions = JSON.parse(localStorage.getItem('selectedCompanions') || "[]");
+  const savedStyles = JSON.parse(localStorage.getItem('selectedStyles') || "[]");
+  const savedIntensity = localStorage.getItem('travelIntensity');
+
+  // 동반자 복원
+  document.querySelectorAll('.companion-tags .tag-button').forEach(btn => {
+    if (savedCompanions.includes(btn.textContent)) {
+      btn.classList.add('selected');
+    }
+  });
+
+  // 스타일 복원
+  document.querySelectorAll('.style-tags .tag-button').forEach(btn => {
+    if (savedStyles.includes(btn.textContent)) {
+      btn.classList.add('selected');
+    }
+  });
+
+  // 강도 복원
+  if (savedIntensity !== null) {
+    const percent = parseInt(savedIntensity, 10);
     sliderHandle.style.left = `${percent}%`;
-    sliderValue = Math.round(percent);
+    sliderValue = percent;
   }
+}
 
-  function stopDrag() {
-    document.removeEventListener('mousemove', onDrag);
-    document.removeEventListener('mouseup', stopDrag);
-  }
-
-  function jumpTo(e) {
-    const rect = sliderTrack.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    x = Math.max(0, Math.min(x, rect.width));
-    const percent = (x / rect.width) * 100;
-    sliderHandle.style.left = `${percent}%`;
-    sliderValue = Math.round(percent);
-  }
-
-  // 완료 버튼 클릭 시
-  
- function submitSelections() {
+// 완료 버튼 클릭 시
+function submitSelections() {
   const selectedCompanions = Array.from(document.querySelectorAll('.companion-tags .tag-button.selected')).map(btn => btn.textContent);
   const selectedStyles = Array.from(document.querySelectorAll('.style-tags .tag-button.selected')).map(btn => btn.textContent);
 
-  // ✅ "반려견과"가 선택되었는지 여부
   const hasPet = selectedCompanions.includes("반려견과");
-  
-  // ✅ 각각 따로 저장
+
   localStorage.setItem('selectedCompanions', JSON.stringify(selectedCompanions));
   localStorage.setItem('selectedStyles', JSON.stringify(selectedStyles));
-  localStorage.setItem('hasPet', hasPet.toString()); // "true" 또는 "false"
+  localStorage.setItem('hasPet', hasPet.toString());
   localStorage.setItem('travelIntensity', sliderValue.toString());
 
-  // ✅ 페이지 이동
   if (fromPage === "justgoset.html") {
-  window.location.href = 'justgoset.html';
-} else {
-  window.location.href = 'justgotour.html';
+    window.location.href = 'justgoset.html';
+  } else {
+    window.location.href = 'justgotour.html';
+  }
 }
 
-}
-
-
-  // 다음에 하기 클릭 시 저장된 스타일 관련 정보 제거 후 이동
+// ✅ 다음에 하기 클릭 시
 document.getElementById('skipLink').addEventListener('click', function (e) {
   e.preventDefault();
 
-  // 저장된 값 제거
-  localStorage.removeItem('selectedCompanions');
-  localStorage.removeItem('selectedStyles');
-  localStorage.removeItem('hasPet');
-  localStorage.removeItem('travelIntensity');
-
-if (fromPage === "justgoset.html") {
-  window.location.href = 'justgoset.html';
-} else {
-  window.location.href = 'justgotour.html';
-}
-
+  if (fromPage === "justgoset.html") {
+    // 기존 값 유지
+    window.location.href = 'justgoset.html';
+  } else {
+    // 값 삭제
+    localStorage.removeItem('selectedCompanions');
+    localStorage.removeItem('selectedStyles');
+    localStorage.removeItem('hasPet');
+    localStorage.removeItem('travelIntensity');
+    window.location.href = 'justgotour.html';
+  }
 });
+//////////////////////////////////////////
 
 </script>
 

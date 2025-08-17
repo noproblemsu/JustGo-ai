@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>최종 일정 확정</title>
+  <style>
+    :root { --blue:#0059ff; --bg:#f0f0f0; --white:#fff; --ink:#000; }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: 'Istok Web', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      display: flex; justify-content: center;
+    }
+
+    .page {
+      width: 100%; max-width: 390px; min-height: 100vh;
+      background: var(--white); display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* 헤더 */
+    .app-header {
+      background-color: var(--blue);
+      height: 66px;
+      display: flex; justify-content: flex-end; align-items: center;
+      padding: 11px 16px; flex-shrink: 0;
+    }
+    .home-icon { width: 30px; height: 30px; display:block; }
+
+    /* 내용 */
+    .content { padding: 16px; gap: 12px; display: flex; flex-direction: column; }
+    .card {
+      border: 1px solid #e6e6e6; border-radius: 10px; padding: 14px; background: #fff;
+    }
+    .title { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
+    .muted { color: #666; font-size: 12px; }
+
+    /* PDF 미리보기 박스 */
+    .preview-wrap {
+      border: 1px solid #e6e6e6; border-radius: 10px; overflow: hidden; background: #fff;
+      height: 360px;
+    }
+    .preview {
+      width: 100%; height: 100%; border: 0; display: block;
+      background: #fdfdfd;
+    }
+
+    /* 푸터 버튼 */
+    .footer {
+      margin-top: auto; padding: 16px; background: #fff; position: sticky; bottom: 0;
+    }
+    .btn {
+      width: 100%; height: 55px; border-radius: 8px; border: none; color: #fff;
+      background: var(--blue); font-weight: 700; font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .app-header, .footer { display: none !important; }
+      .page { max-width: 100%; }
+    }
+  </style>
+
+  <!-- jsPDF & html2canvas -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <div class="page">
+    <!-- 헤더: 홈으로 -->
+    <header class="app-header">
+      <a href="index.html" aria-label="Home">
+        <img src="https://img.icons8.com/ios-filled/50/ffffff/home.png" alt="Home" class="home-icon">
+      </a>
+    </header>
+
+    <main class="content">
+      <div class="card">
+        <h2 class="title">확정된 일정</h2>
+        <div id="final-html"></div>
+        <p class="muted">* justgochat.html에서 선택한 일정이 표시됩니다.</p>
+      </div>
+
+      <!-- PDF 미리보기 박스 -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div class="title" style="font-size:16px;">PDF 미리보기</div>
+          <button id="make-preview" class="btn" style="width:auto; height:40px; font-size:14px; padding:0 12px;">
+            미리보기 생성
+          </button>
+        </div>
+        <div class="preview-wrap">
+          <iframe id="pdf-preview" class="preview" title="PDF Preview"></iframe>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <button id="download-pdf" class="btn">PDF로 다운로드</button>
+      <button id="save-schedule" class="btn">일정 저장하기</button>
+    </footer>
+  </div>
+
+  <!-- 인쇄용 숨은 영역 -->
+  <div id="print-area" style="position:absolute; left:-99999px; top:-99999px; width:794px; padding:40px;">
+    <div id="print-content" style="font-family:'Noto Sans KR',sans-serif; color:#000;"></div>
+  </div>
+
+  <script>
+    /** =========================
+     *  확정 일정 표시
+     *  ========================= */
+    const raw = localStorage.getItem('finalSchedule');  
+    const finalHtml = document.getElementById('final-html');
+    const printContent = document.getElementById('print-content');
+
+    function safeRender(scheduleStr){
+      const esc = s => (s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]) );
+      finalHtml.innerHTML = `
+        <pre style="white-space:pre-wrap; font-size:14px; line-height:1.5; margin:0;">${esc(scheduleStr || '확정된 일정이 없습니다.')}</pre>
+      `;
+      printContent.innerHTML = `
+        <h1 style="margin:0 0 16px 0; font-size:22px;">확정 일정</h1>
+        <div style="font-size:14px; white-space:pre-wrap; line-height:1.6;">${esc(scheduleStr || '확정된 일정이 없습니다.')}</div>
+      `;
+    }
+
+    try{
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          safeRender(typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2));
+        } catch {
+          safeRender(raw);
+        }
+      } else {
+        safeRender('');
+      }
+    } catch (e) { safeRender(''); }
+
+    /** =========================
+     *  PDF 생성 (미리보기/다운로드 공용)
+     *  ========================= */
+    async function makePdfBlobUrl() {
+      const area = document.getElementById('print-area');
+      const A4_WIDTH_PT = 595.28, A4_HEIGHT_PT = 841.89;
+
+      const canvas = await html2canvas(area, { scale: 2, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+
+      const ratio = A4_WIDTH_PT / canvas.width;
+      let renderedHeight = canvas.height * ratio;
+      let y = 0;
+
+      if (renderedHeight <= A4_HEIGHT_PT) {
+        pdf.addImage(imgData, 'PNG', 0, 0, A4_WIDTH_PT, renderedHeight);
+      } else {
+        while (renderedHeight > 0) {
+          pdf.addImage(imgData, 'PNG', 0, y, A4_WIDTH_PT, canvas.height * ratio);
+          renderedHeight -= A4_HEIGHT_PT;
+          y -= A4_HEIGHT_PT;
+          if (renderedHeight > 0) pdf.addPage();
+        }
+      }
+      const blob = pdf.output('blob');
+      return { url: URL.createObjectURL(blob), pdf };
+    }
+
+    // 미리보기
+    document.getElementById('make-preview').addEventListener('click', async ()=>{
+      const preview = document.getElementById('pdf-preview');
+      preview.src = 'about:blank';
+      try{
+        const { url } = await makePdfBlobUrl();
+        preview.src = url;
+      }catch(e){ alert('PDF 미리보기 실패'); console.error(e); }
+    });
+
+    // 다운로드
+    document.getElementById('download-pdf').addEventListener('click', async ()=>{
+      try{
+        const { pdf } = await makePdfBlobUrl();
+        pdf.save('JustGo_일정.pdf');
+      }catch(e){ alert('PDF 다운로드 실패'); }
+    });
+
+    /** =========================
+     *  일정 저장하기 (로컬 → index.html "내 일정 보기")
+     *   - 기존에 붙어있던 alert 리스너를 제거하기 위해
+     *     cloneNode → replaceWith 로 완전 교체 후 바인딩
+     *  ========================= */
+    function _loadSaved(){ try { return JSON.parse(localStorage.getItem('savedSchedules') || '[]'); } catch { return []; } }
+    function _saveSaved(list){ localStorage.setItem('savedSchedules', JSON.stringify(list)); }
+    function _uid(){ return 'plan_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+    function _gatherMeta(){
+      const destination = localStorage.getItem('selectedLocation') || '';
+      let dates = '';
+      try {
+        const d = JSON.parse(localStorage.getItem('selectedDates') || '[]');
+        if (Array.isArray(d) && d.length === 2) dates = `${d[0]} ~ ${d[1]}`;
+      } catch {}
+      const budget = localStorage.getItem('budget') || '';
+      return { destination, dates, budget };
+    }
+    function _upsertSchedule(scheduleText){
+      const list = _loadSaved();
+      const norm = (scheduleText || '').trim();
+      const meta = _gatherMeta();
+      const now = new Date().toISOString();
+
+      const i = list.findIndex(it => (it.schedule || '').trim() === norm);
+      if (i >= 0){
+        list[i].updatedAt = now;
+        list[i].meta = meta;
+        _saveSaved(list);
+        return list[i].id;
+      }
+      const item = {
+        id: _uid(),
+        title: meta.destination ? `${meta.destination} 일정` : '저장된 일정',
+        schedule: norm,
+        createdAt: now,
+        updatedAt: now,
+        meta
+      };
+      list.unshift(item);
+      _saveSaved(list);
+      return item.id;
+    }
+
+    (function bindSaveClean(){
+      // 1) id가 있으면 우선
+      let btn = document.getElementById('save-schedule');
+      // 2) 없으면 data-role
+      if (!btn) btn = document.querySelector('[data-role="save-schedule"]');
+      // 3) 마지막 백업: 라벨 텍스트로 탐색(UI는 그대로)
+      if (!btn) {
+        btn = Array.from(document.querySelectorAll('button,a')).find(el => /일정\s*저장하기/.test((el.textContent||'').trim()));
+      }
+      if (!btn) return;
+
+      // 이전(알림) 리스너 제거 위해 완전 교체
+      const clean = btn.cloneNode(true);
+      btn.replaceWith(clean);
+
+      clean.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const scheduleStr = raw || '';
+        if (!scheduleStr.trim()){
+          alert('저장할 일정이 없습니다.');
+          return;
+        }
+        _upsertSchedule(scheduleStr);
+        // 인덱스의 "내 일정 보기"로 이동
+        window.location.href = 'index.html#my-plans';
+      });
+    })();
+  </script>
+</body>
+</html>
+
+
+
+
+

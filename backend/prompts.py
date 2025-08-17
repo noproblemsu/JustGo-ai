@@ -1,95 +1,126 @@
+# backend/prompts.py
+from __future__ import annotations
 from datetime import datetime, date, timedelta
 from typing import List, Union
-
+from textwrap import dedent
 
 def build_prompt(
     location: str,
     days: Union[int, str],
     budget: Union[int, str],
     companions: Union[List[str], str, None],
-    style: str,
+    style: Union[List[str], str, None],
     selected_places: Union[List[str], None],
     travel_date: Union[str, date, datetime],
     count: int = 1,
 ) -> str:
-    # ---- 입력값 정리 ----
+    # ---- 입력 정리 ----
     days = int(days)
-    budget = int(budget)
+    budget = int(str(budget).replace(",", "").strip())
 
     if companions is None:
         companions = []
-    elif isinstance(companions, str):
+    if isinstance(companions, str):
         companions = [companions]
-    companion_str = ", ".join([c for c in companions if str(c).strip()]) or "없음"
+    companions = [c for c in companions if str(c).strip()]
+    comp_str = ", ".join(companions) if companions else "없음"
 
-    selected_places = selected_places or []
-    selected_str = "\n".join(
-        [f"- {str(place).strip()}" for place in selected_places if str(place).strip()]
-    ) or "없음"
+    if style is None:
+        style = []
+    if isinstance(style, str):
+        style = [style]
+    styles = [s for s in style if str(s).strip()]
+    style_str = ", ".join(styles) if styles else "자유 여행"
 
-    # travel_date -> datetime 보정
+    sel = [str(p).strip() for p in (selected_places or []) if str(p).strip()]
+    sel_str = "\n".join(f"- {p}" for p in sel) if sel else "없음"
+
+    # 날짜 처리
     if isinstance(travel_date, str):
         start_dt = datetime.strptime(travel_date.strip(), "%Y-%m-%d")
     elif isinstance(travel_date, date) and not isinstance(travel_date, datetime):
         start_dt = datetime.combine(travel_date, datetime.min.time())
     else:
-        start_dt = travel_date
-    if not isinstance(start_dt, datetime):
-        start_dt = datetime.today()
+        start_dt = travel_date if isinstance(travel_date, datetime) else datetime.today()
 
-    # 날짜 리스트
     date_list = [(start_dt + timedelta(days=i)).strftime("%Y-%m-%d (%a)") for i in range(days)]
-    date_only = [d.split(" ")[0] for d in date_list]  # YYYY-MM-DD만
-    date_str = "\n".join([f"- {d}" for d in date_list])
+    date_only = [d.split(" ")[0] for d in date_list]  # YYYY-MM-DD
+    date_lines = "\n".join(f"- {d}" for d in date_list)
 
-    # ---- 프롬프트 본문 ----
-    return f"""
-너는 여행 일정 전문 플래너야.
+    # ---- 프롬프트 ----
+    return dedent(f"""
+    너는 여행 일정 전문가다. 아래의 **하드 규칙**을 100% 준수하며 **{count}개의 서로 다른 일정안**을 한 번에 작성하라.
+    출력은 **순수 텍스트**만 사용한다. (마크다운/코드블록/표/불릿 금지)
 
-여행지는 {location}이고, 여행 기간은 총 {days}일이야.
-여행 날짜는 다음과 같아:
-{date_str}
+    [입력]
+    - 여행지: {location}
+    - 여행일수: {days}일
+    - 여행 시작일: {date_list[0]}
+    - 동반자: {comp_str}
+    - 여행 스타일: {style_str}
+    - 총 예산: {budget:,}원
+    - 사용자 선택 장소(있으면 '각각 1회만' 반영):
+    {sel_str}
+    - 날짜 전체:
+    {date_lines}
 
-각 날짜는 요일이 함께 포함되어 있고, **각 날짜마다 아침, 점심, 저녁 일정**을 모두 구성해줘.
+    [상위 제목 형식]
+    각 일정안은 다음 제목으로 시작한다(번호 필수).
+    - 일정추천 1: {location} {days}일 코스
+    - 일정추천 2: {location} {days}일 코스
+    ... (요청 개수만큼)
+    각 일정안 사이는 **한 줄에 '---'** 만 넣어 구분한다.
 
-여행 예산은 {budget:,}원이야.
-동반자는 {companion_str}이고, 여행 스타일은 '{style}'이야.
+    [하드 규칙]
+    1) 날짜 헤더
+       - 각 날짜는 헤더로 시작: "YYYY-MM-DD (DayN)"
+       - 모든 날짜 헤더가 반드시 본문에 존재해야 한다: {", ".join(date_only)}
+       - 헤더 아래에 바로 시간 라인이 이어지고, 헤더/시간 순서를 절대 바꾸지 말 것.
 
-아래는 사용자가 선호하는 장소 목록이야:
-{selected_str}
+    2) 하루 슬롯(정확히 5줄, 시간 오름차순 고정)
+       08:00 ~ 09:30 아침: <상호명> (<도로명 주소>) (약 <원>)
+       09:30 ~ 12:00 <관광/명소 상호명> (<도로명 주소>) (약 <원>)
+       12:00 ~ 13:30 점심: <상호명> (<도로명 주소>) (약 <원>)
+       14:00 ~ 18:00 <관광/명소 상호명> (<도로명 주소>) (약 <원>)
+       19:00 ~ 20:30 저녁: <상호명> (<도로명 주소>) (약 <원>)
+       - 위 5개 시간대는 **모든 날짜에서 반드시 그대로 사용**한다(시간 겹침 금지).
 
-다만 사용자가 선택한 장소가 부족하거나 많을 경우, 적절히 추가하거나 줄여도 괜찮아.
+    3) 플레이스홀더 금지
+       - "주요명소/관광지/체험/카페/휴식" 같은 추상어만 쓰지 말 것.
+       - 각 라인은 **실제 상호명 + '도로명 주소'**를 괄호로 적는다.
+         예) "부산현대미술관 (부산광역시 강서구 낙동남로 1191)"
 
----
+    4) 장소 중복 금지(한 일정안 전체 기준)
+       - 같은 '핵심명'(괄호 앞 이름에서 '아침/점심/저녁/브런치/런치/디너' 같은 라벨 제거 후)을
+         **그 일정안 전체에서 단 한 번만** 사용한다(다른 날이라도 중복 금지).
+       - 체인점은 지점까지 포함해 핵심명을 구분한다(예: "OO커피 부산역점"과 "OO커피 서면점"은 다른 곳).
+       - 사용자가 지정한 장소가 있으면 **각각 정확히 1회만** 배치한다.
 
-### ✅ 반드시 지켜야 할 일정 작성 규칙
+    5) 비용 표기
+       - **모든 시간 라인 끝**에 " (약 xx,xxx원)" 형식으로 비용을 표기한다(무료면 0원 표기).
+       - **총 예상 비용 문구는 일정안 맨 마지막에 1회만** 작성한다.
+       - 총액은 입력 예산의 **±15%** 범위 내에서 합리적으로 배분한다.
+       - 총비용은 활동별 비용의 합과 일치해야 한다.
 
-1. 각 날짜는 **아침, 점심, 저녁 3개의 활동**으로 구성할 것.
-2. 각 날짜는 반드시 아래 형식으로 구분해:
-   - `YYYY-MM-DD (요일)` 제목 형태로 날짜를 명시할 것 (예: `2025-08-08 (Fri)`)
-2-1. **아래 날짜들이 모두 본문에 반드시 등장**해야 함: {", ".join(date_only)}
-     한 날짜라도 빠지면 **전체 답변을 다시 작성**할 것.
-3. 각 활동에는 다음 항목이 필수야:
-   - 활동 시간 (예: `09:00~10:30`)
-   - 활동 설명
-   - 예상 소요 시간 (예: 약 1시간 30분)
-   - 예상 비용 (예: 약 15,000원)
-   예시: `09:00~10:30 불국사 관람 (경북 경주시 불국로 385, 약 1시간 30분, 약 3,000원)`
-4. 일정은 **동선 고려**, 자동차로 **1시간 이내 거리**로 무리하지 않게 구성할 것.
-4-1. **총 예상 비용은 해당 일정추천의 모든 날짜별 예상 비용을 합산한 값**이어야 함.
-4-2. 일정에 나오는 **모든 장소**는 실제 존재하는 구체적인 상호명과 **도로명 주소**를 반드시 포함할 것.
-   - 예시: "속초맛집투어" 대신 `"속초 ○○횟집 (강원 속초시 중앙로 123)"` 처럼 작성.
+    6) 동선은 합리적으로(과도한 왕복/이동 금지), 실내·실외 균형.
 
-5. ⚠️ **각 일정 추천 하나당 총 예상 비용은 반드시 예산의 ±15% 이내**여야 해.
-   - 예산이 {budget:,}원이면, 각 일정별 총 비용은 반드시 **{int(budget*0.85):,}원 ~ {int(budget*1.15):,}원** 범위 내여야 해.
-6. 날짜는 {days}일 **모두 빠짐없이** 작성해. **하루라도 누락되면 틀린 일정**이야.
-7. 각 날짜 마지막에는 **간단한 마무리 문장**을 넣을 것.
-8. 출력은 **마크다운 형식**으로 정리할 것.
-9. ⚠️ **총 예상 비용은 일정 마지막에 단 1번만 작성**할 것.
-   - 하루마다 쓰지 마. 오직 마지막에만 아래 형식으로 써:
-   - `총 예상 비용은 약 289,000원으로, 입력 예산인 300,000원 내에서 잘 계획되었어요.`
-11. 각 일정은 아래 형식으로 시작
-    - 일정추천 1: 힐링중심
-12. 일정 본문에는 `"일정추천"`이라는 단어를 다시 쓰지 마.
-13. 출력 형식을 어기면 안 돼. 반드시 위 규칙을 모두 지켜.
-"""
+    [출력 형식 스켈레톤(예시)]
+    일정추천 1: {location} {days}일 코스
+
+    {date_list[0]} (Day1)
+    08:00 ~ 09:30 아침: <상호명> (<도로명 주소>) (약 <원>)
+    09:30 ~ 12:00 <명소 상호명> (<도로명 주소>) (약 <원>)
+    12:00 ~ 13:30 점심: <상호명> (<도로명 주소>) (약 <원>)
+    14:00 ~ 18:00 <명소 상호명> (<도로명 주소>) (약 <원>)
+    19:00 ~ 20:30 저녁: <상호명> (<도로명 주소>) (약 <원>)
+
+    ---
+    (다음 일정안도 같은 형식으로 이어서 작성)
+
+    [내부 검증 체크리스트(모델이 스스로 확인 후 위반 시 수정할 것)]
+    - 모든 날짜 헤더가 존재하는가? 헤더 바로 아래에 시간 라인이 왔는가?
+    - 모든 날짜가 정확히 5개의 시간대 라인을 갖고, 시간이 오름차순인가?
+    - 플레이스홀더 없이 모든 라인이 실제 상호+도로명 주소를 갖는가?
+    - '핵심명'이 그 일정안 전체에서 단 한 번씩만 등장하는가? (중복이면 다른 실제 장소로 교체)
+    - 총비용 문구가 맨 끝에 1회만 있고, 활동비 합과 일치하는가?
+    """).strip()

@@ -5,6 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>관광지 추천</title>
   <style>
+     /* 화면 중앙에 393×787 카드 배치 */
+html, body {
+  min-height: 100vh;           /* height → min-height 권장 */
+  width: 100vw;
+  margin: 0; padding: 0;
+  display: flex;
+  justify-content: center;      /* 가로만 가운데 유지 */
+  align-items: flex-start;       /* ✅ 세로는 맨 위로 */
+  background: #f0f0f0;
+}
+ .page{
+    position:absolute;
+    top:206px;          /* 헤더 높이에 맞춰 조정 */
+    bottom:147px;       /* 푸터 높이에 맞춰 조정 */
+    left:0; right:0;
+    padding:0 16px;
+  }
+
     :root {
       --text-primary: #000;
       --text-subtle: #666;
@@ -19,8 +37,11 @@
     body{margin:0;font-family:'Inter','Istok Web',system-ui,sans-serif;background:var(--bg-main);color:var(--text-primary)}
     .page{max-width:393px;margin:0 auto;padding:40px 16px 160px}
     h1{font-size:30px;line-height:1.35;margin:0 0 8px;font-weight:800}
-    .fixed{position:fixed;top:0;left:0;right:0;background:#fff;z-index:10;max-width:393px;margin:0 auto;box-shadow:0 2px 4px rgba(0,0,0,.05)}
-    .fixed-inner{padding:50px 16px 16px}
+.fixed{
+      position:absolute; top:0; left:0; right:0;
+      background:#fff; z-index:10;
+      box-shadow:0 2px 4px rgba(0,0,0,.05);
+    }      .fixed-inner{padding:50px 16px 16px}
     .summary{background:var(--bg-light);border-radius:12px;padding:10px 12px}
     .summary .title{font-weight:600;margin:0 0 4px}
     .chips{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--text-subtle)}
@@ -37,25 +58,42 @@
     .body{flex:1;display:flex;flex-direction:column;gap:6px}
     .name{font-weight:700}
     .meta,.rate{font-size:12px;color:var(--text-subtle)}
+    .scroll{
+    margin-top:0; 
+    height:100%; 
+    overflow:auto; 
+    padding-right:4px; 
+   }
     .actions{display:flex;gap:8px;align-items:center;margin-top:auto}
     .map{font-size:12px;color:var(--blue);text-decoration:underline}
     .pick{margin-left:auto;background:var(--black);color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
     .picked{background:#00aa55}
-    .footer{position:fixed;left:0;right:0;bottom:0;background:#fff}
-    .footer-inner{max-width:393px;margin:0 auto;padding:12px 16px 28px}
-    .cta{width:100%;background:var(--blue);color:#fff;border:0;border-radius:10px;padding:14px;font-weight:800;font-size:18px}
-    .skip{display:block;margin-top:8px;text-align:center;font-size:12px;color:var(--text-primary);text-decoration:none}
-    .empty{color:var(--text-subtle);font-size:14px}
-    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#111;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.25s}
+     .footer{position:absolute; left:0; right:0; bottom:27px; background:#fff}
+    .footer-inner{padding:12px 16px 28px}
+    .cta{width:100%;background:var(--blue);color:#fff;border:0;border-radius:8px;padding:15px 14px;font-weight:600;font-size:18px} 
+    .skip{display:block;margin-top:8px;text-align:center;font-size:12px;color:var(--text-primary);text-decoration:none; letter-spacing: -0.7px;font-weight: 540; }    .empty{color:var(--text-subtle);font-size:14px}
+    .toast{position:absolute;left:50%;transform:translateX(-50%);bottom:90px;background:#111;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.25s}
     .toast.show{opacity:1}
 
     #complete-btn { display: none !important; }
+.container {
+  position: relative;       /* 자식 absolute의 기준 */
+  width: 393px; height: 787px;
+  background: #fff;         /* 카드 배경 */
+  overflow: hidden;
+  
+  
+}
+
+/* body 배경은 카드 밖만 보이도록 투명 추천 */
+body { background: transparent; }
 
   </style>
 
 
 </head>
 <body>
+  <div class="container">
   <div class="fixed">
     <div class="fixed-inner">
       <h1>원하는 관광지를<br/>선택해주세요.</h1>
@@ -310,7 +348,11 @@ doneBtn.addEventListener("click", async () => {
     const res = await fetch(`${API_BASE}/api/selection/places`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ destination, places: selectedPlaces })
+body: JSON.stringify({
+        destination,
+        places: selectedPlaces,
+        category: "attraction"   // 🔥 카테고리 명시
+      })
     });
 
     if (!res.ok) {

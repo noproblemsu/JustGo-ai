@@ -5,6 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>맛집 추천</title>
   <style>
+    /********** 바깥 회색 배경 + 카드 중앙 배치 (디자인=두번째 코드) **********/
+    html, body{
+      min-height:100vh; width:100vw; margin:0; padding:0;
+      display:flex; justify-content:center; align-items:flex-start;
+      background:#f0f0f0;
+    }
+    /* 흰색 카드(393×787) */
+    .container{
+      position:relative;
+      width:393px; height:787px;
+      background:#fff;
+      overflow:hidden;
+    }
+    /* 카드 배경만 보이게 body 투명 */
+    body{ background:transparent; }
+
+    /********** 공통 토큰 **********/
     :root {
       --text-primary: #000;
       --text-secondary: rgba(0, 0, 0, 0.5);
@@ -17,20 +34,22 @@
     }
     * { box-sizing: border-box; }
     body {
-      margin: 0;
       font-family: 'Inter', 'Istok Web', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-      background-color: var(--bg-main);
       color: var(--text-primary);
     }
-    .page-container {
-      max-width: 393px;
-      margin: 0 auto;
-      padding: 40px 16px 180px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+
+    /********** 스크롤 영역: 헤더 높이만큼 위 패딩 **********/
+    .page-container{
+      position:absolute;
+      top:0;
+      bottom:112px;          /* 푸터 위로 공간 */
+      left:0; right:0;
+      padding:125px 16px 0;  /* 헤더 높이 */
+      overflow:auto;
+      display:flex; flex-direction:column; gap:12px;
     }
-    /* 여행지 미선택 경고 */
+
+    /********** 여행지 미선택 경고 **********/
     #location-warning {
       display:none; padding:16px; background:#fff3f3; border:1px solid #ffcccc;
       border-radius:8px; text-align:center; color:#cc0000;
@@ -39,30 +58,29 @@
       margin-top:8px; padding:8px 16px; background:#0059ff; color:#fff; border:none; border-radius:6px; font-size:14px; cursor:pointer;
     }
 
-    /* 고정 헤더 */
-    .fixed-header {
-      position: fixed; top: 0; left: 0; right: 0;
-      background: #fff; z-index: 100;
-      max-width: 393px; margin: 0 auto;
-      padding: 50px 16px 16px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    /********** 고정 헤더 (카드 기준) **********/
+    .fixed-header{
+      position:absolute; top:0; left:0; right:0;
+      background:#fff; z-index:10;
+      padding:50px 16px 16px;
+      box-shadow:0 2px 4px rgba(0,0,0,.05);
     }
-    .main-title { font-weight: 700; font-size: 30px; line-height: 1.44; margin: 0; }
+    .main-title { font-weight:700; font-size:30px; line-height:1.44; margin:0; }
 
-    /* 카테고리 캐러셀 */
-    .category-carousel {
-      display: flex; gap: 24px; overflow-x: auto; padding: 12px 0; margin-top: 125px;
-      -ms-overflow-style: none; scrollbar-width: none;
+    /********** 카테고리 캐러셀 **********/
+    .category-carousel{
+      display:flex; gap:24px; overflow-x:auto; padding:8px 0 2px; margin-top:24px;
+      -ms-overflow-style:none; scrollbar-width:none;
     }
-    .category-carousel::-webkit-scrollbar { display: none; }
+    .category-carousel::-webkit-scrollbar { display:none; }
     .category-item { display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0; cursor:pointer; }
-    .category-image { width:76px; height:76px; border-radius:50%; object-fit:cover; transition: opacity .2s ease; }
+    .category-image { width:76px; height:76px; border-radius:50%; object-fit:cover; transition:opacity .2s ease; }
     .category-image.inactive { opacity:.5; }
     .category-label, .category-label-active { font-weight:500; font-size:14px; text-align:center; margin:0; }
     .category-label { color:#828282; }
     .category-label-active { color:#161823; }
 
-    /* 툴바 */
+    /********** 정렬 드롭다운 + 결과 개수 **********/
     .filter-bar { display:flex; justify-content:space-between; align-items:center; padding:0 8px; margin-top:.5px; }
     .select-wrapper { position:relative; display:inline-block; margin-right:25px; }
     .sort-select {
@@ -76,7 +94,7 @@
     }
     .result-count { font-size:14px; margin-top:4px; color:var(--text-secondary); }
 
-    /* 리스트 영역 */
+    /********** 리스트 영역 **********/
     .listings-container { display:flex; flex-direction:column; gap:16px; }
     .location-card { display:flex; flex-direction:column; gap:10px; }
     .image-carousel { width:100%; }
@@ -90,89 +108,87 @@
     }
     .select-btn.selected { background: var(--primary-blue); }
 
-    /* 푸터 */
-    .page-footer {
-      position: sticky; bottom: 0; left: 50%; transform: translateX(-50%);
-      width: 100%; max-width: 393px; background: #fff; padding: 16px;
+    /********** 푸터 (카드 하단 고정) **********/
+    .page-footer{
+      position:absolute; left:0; right:0; bottom:34px;
+      background:#fff; padding:12px 16px 16px;
       display:flex; flex-direction:column; align-items:center; gap:12px;
-      border-top: 1px solid var(--border-color);
+      border-top:1px solid var(--border-color);
     }
-    .action-button { background: var(--primary-blue); color:#fff; border:none; border-radius:8px; width:100%; padding:14px; font-size:18px; font-weight:700; cursor:pointer; }
-    .skip-link { font-size:12px; color:#000; text-decoration:none; }
+    .action-button{ width:100%; background:var(--primary-blue); color:#fff; border:none; border-radius:8px; padding:14px; font-size:18px; font-weight:700; cursor:pointer; }
+    .skip-link{ font-size:12px; color:#000; text-decoration:none; }
     .empty-hint { padding:16px; color:#888; }
   </style>
 </head>
 <body>
-  <main class="page-container">
+  <div class="container">
+    <main class="page-container">
+      <!-- 여행지 경고 -->
+      <div id="location-warning">
+        <p style="margin:0 0 8px;">⚠️ 여행지를 먼저 선택해주세요.</p>
+        <button id="go-select-location">여행지 선택하러 가기</button>
+      </div>
 
-    <!-- 여행지 경고 -->
-    <div id="location-warning">
-      <p style="margin:0 0 8px;">⚠️ 여행지를 먼저 선택해주세요.</p>
-      <button id="go-select-location">여행지 선택하러 가기</button>
-    </div>
+      <!-- 고정 헤더 -->
+      <div class="fixed-header" id="fixed-header">
+        <h1 class="main-title">방문하고 싶은<br>음식점을 선택해주세요.</h1>
+        <!-- 카테고리 캐러셀 -->
+        <div class="category-carousel">
+          <div class="category-item" data-category="한식">
+            <img src="justgoimages/hansik.jpg" alt="한식" class="category-image">
+            <p class="category-label-active">한식</p>
+          </div>
+          <div class="category-item" data-category="양식">
+            <img src="justgoimages/yangsik.jpg" alt="양식" class="category-image inactive">
+            <p class="category-label">양식</p>
+          </div>
+          <div class="category-item" data-category="중식">
+            <img src="justgoimages/china.jpg" alt="중식" class="category-image inactive">
+            <p class="category-label">중식</p>
+          </div>
+          <div class="category-item" data-category="일식">
+            <img src="justgoimages/japan.jpg" alt="일식" class="category-image inactive">
+            <p class="category-label">일식</p>
+          </div>
+          <div class="category-item" data-category="카페">
+            <img src="justgoimages/cafe.jpg" alt="카페" class="category-image inactive">
+            <p class="category-label">카페</p>
+          </div>
+          <div class="category-item" data-category="패스트푸드">
+            <img src="justgoimages/chicken.jpg" alt="패스트푸드" class="category-image inactive">
+            <p class="category-label">패스트푸드</p>
+          </div>
+        </div>
 
-    <!-- 고정 헤더 -->
-    <div class="fixed-header" id="fixed-header">
-      <h1 class="main-title">방문하고 싶은<br>음식점을 선택해주세요.</h1>
-    </div>
+        <!-- 드롭다운 + 결과 개수 -->
+        <div class="filter-bar">
+          <div class="select-wrapper">
+            <select class="sort-select" id="food-sort">
+              <option value="review">리뷰 많은 순</option>
+              <option value="rating">평점 높은 순</option>
+              <!-- <option value="distance">거리 순</option> -->
+            </select>
+            <span class="select-arrow"></span>
+          </div>
+          <p class="result-count">결과 0개</p>
+        </div>
+      </div>
 
-    <!-- 음식 카테고리 -->
-    <div class="category-carousel">
-      <div class="category-item" data-category="한식">
-        <img src="justgoimages/hansik.jpg" alt="한식" class="category-image">
-        <p class="category-label-active">한식</p>
-      </div>
-      <div class="category-item" data-category="양식">
-        <img src="justgoimages/yangsik.jpg" alt="양식" class="category-image inactive">
-        <p class="category-label">양식</p>
-      </div>
-      <div class="category-item" data-category="중식">
-        <img src="justgoimages/china.jpg" alt="중식" class="category-image inactive">
-        <p class="category-label">중식</p>
-      </div>
-      <div class="category-item" data-category="일식">
-        <img src="justgoimages/japan.jpg" alt="일식" class="category-image inactive">
-        <p class="category-label">일식</p>
-      </div>
-      <div class="category-item" data-category="카페">
-        <img src="justgoimages/cafe.jpg" alt="카페" class="category-image inactive">
-        <p class="category-label">카페</p>
-      </div>
-      <div class="category-item" data-category="패스트푸드">
-        <img src="justgoimages/chicken.jpg" alt="패스트푸드" class="category-image inactive">
-        <p class="category-label">패스트푸드</p>
-      </div>
-    </div>
+      <!-- 결과 카드 영역 -->
+      <section class="listings-container" id="food-results"></section>
+    </main>
 
-    <!-- 드롭다운 + 결과 개수 -->
-    <div class="filter-bar">
-      <div class="select-wrapper">
-        <select class="sort-select" id="food-sort">
-          <option value="review">리뷰 많은 순</option>
-          <option value="rating">평점 높은 순</option>
-          <!-- 거리 순을 쓰려면 centerLat/centerLng 저장 필요
-          <option value="distance">거리 순</option>
-          -->
-        </select>
-        <span class="select-arrow"></span>
-      </div>
-      <p class="result-count">결과 0개</p>
-    </div>
-
-    <!-- 결과 카드 영역 -->
-    <section class="listings-container" id="food-results"></section>
-  </main>
-
-  <!-- 푸터 버튼 -->
-  <footer class="page-footer">
-    <button class="action-button" id="done-btn">완료</button>
-    <a href="#" class="skip-link" id="skip-link">다음에 하기</a>
-  </footer>
+    <!-- 푸터 버튼 -->
+    <footer class="page-footer">
+      <button class="action-button" id="done-btn">완료</button>
+      <a href="#" class="skip-link" id="skip-link">다음에 하기</a>
+    </footer>
+  </div>
 
   <script>
     const API_BASE = "http://127.0.0.1:8000";
 
-    // 요소 참조
+    // 요소
     const categoryItems = document.querySelectorAll('.category-item');
     const resultCount   = document.querySelector('.result-count');
     const container     = document.getElementById('food-results');
@@ -184,8 +200,18 @@
     let selectedCategory = "한식";
     const cache = Object.create(null); // key: `${cat}|${sort}`
 
+    /***** 선택 유지 스토어(카테고리 전환/새로고침 유지) — 통합 키 사용 *****/
+    const SELECT_KEY_MAIN = "selectedRestaurants";       // 1번 코드 호환
+    const SELECT_KEY_ALT  = "selectedRestaurantsAll";    // 2번 코드 호환
+    const bootSelected = JSON.parse(localStorage.getItem(SELECT_KEY_MAIN) || localStorage.getItem(SELECT_KEY_ALT) || "[]");
+    const selectedStore = new Set(bootSelected);
+    function persistSelectedStore() {
+      const arr = Array.from(selectedStore);
+      localStorage.setItem(SELECT_KEY_MAIN, JSON.stringify(arr));
+      localStorage.setItem(SELECT_KEY_ALT,  JSON.stringify(arr));
+    }
+
     // 백엔드 카테고리 매핑(6종)
-    // 분식/치킨/피자는 패스트푸드로 묶어 API 호출
     const CATEGORY_TO_API = {
       "한식": "한식",
       "양식": "양식",
@@ -205,10 +231,17 @@
       "피자": ["피자","pizza","pizzeria","도미노","파파존스","피자헛","미스터피자","domino"]
     };
 
+    // 여행지 가져오기(두 키 지원)
+    function getDestination() {
+      return (localStorage.getItem("selectedLocation") ||
+              localStorage.getItem("justgo_selected_destination") ||
+              "").trim();
+    }
+
     // 여행지 입력 확인
     function ensureLocation() {
-      const loc = localStorage.getItem("selectedLocation");
-      if (!loc || loc === "여행지") {
+      const loc = getDestination();
+      if (!loc) {
         warningBox.style.display = "block";
         fixedHeader.style.display = "none";
         document.querySelector(".page-footer").style.display = "none";
@@ -232,9 +265,9 @@
       resultCount.textContent = "결과 0개";
     }
 
-    // 지도 검색 URL 통일
+    // 지도 검색 URL
     function buildNaverMapUrl(p) {
-      const loc = localStorage.getItem("selectedLocation") || "";
+      const loc = getDestination();
       const addrToken = (p.address || "").split(" ")[0] || "";
       const query = [p.name || "", loc, addrToken].filter(Boolean).join(" ");
       return "https://map.naver.com/v5/search/" + encodeURIComponent(query);
@@ -252,7 +285,7 @@
         if (key && !seen.has(key)) { seen.add(key); uniq.push(p); }
       });
 
-      // 정렬(프론트 보정)
+      // 정렬
       const list = [...uniq];
       const sort = sortSelect?.value || "review";
       if (sort === "rating") {
@@ -268,17 +301,12 @@
       }
 
       resultCount.textContent = `결과 ${list.length}개`;
-
-      if (!list.length) {
-        showEmpty();
-        return;
-      }
+      if (!list.length) { showEmpty(); return; }
 
       list.forEach(p => {
-        const q = `${p.name || ""} ${localStorage.getItem("selectedLocation") || ""}`.trim();
-        const img =
-          p.image_url || p.imageUrl ||
-          `https://source.unsplash.com/600x400/?${encodeURIComponent(q)}`;
+        const name = (p.name || "").trim();
+        const q = `${name} ${getDestination()}`.trim();
+        const img = p.image_url || p.imageUrl || `https://source.unsplash.com/600x400/?${encodeURIComponent(q)}`;
         const ratingText = (p.rating != null) ? p.rating : "-";
         const reviewText = (p.review_count != null) ? `${p.review_count}개` : "리뷰 정보 없음";
         const addrText   = p.address || "";
@@ -291,11 +319,11 @@
         card.innerHTML = `
           <div class="image-carousel">
             <a class="map-link" href="${mapUrl}" target="_blank" rel="noopener" aria-label="네이버 지도에서 보기">
-              <img class="place-img" src="${img}" alt="${p.name || ""}" loading="lazy" decoding="async" />
+              <img class="place-img" src="${img}" alt="${name}" loading="lazy" decoding="async" />
             </a>
           </div>
           <div class="location-info">
-            <p class="location-name">${p.name || ""}</p>
+            <p class="location-name">${name}</p>
             <div class="meta-info">
               <div class="rating"><span>⭐</span> <span>${ratingText} (${reviewText})</span></div>
               <div>${addrText}</div>
@@ -306,22 +334,34 @@
             </div>
           </div>
         `;
+
         const imgEl = card.querySelector(".place-img");
         imgEl.onerror = () => { imgEl.src = `https://picsum.photos/seed/${encodeURIComponent(q)}/600/400`; };
 
-        container.appendChild(card);
-      });
-
-      // 선택 토글
-      container.querySelectorAll(".select-btn").forEach(btn => {
+        // 저장소 상태 반영
+        const btn = card.querySelector(".select-btn");
+        if (selectedStore.has(name)) {
+          btn.classList.add("selected");
+          btn.textContent = "선택됨";
+        }
         btn.addEventListener("click", () => {
-          btn.classList.toggle("selected");
-          btn.textContent = btn.classList.contains("selected") ? "선택됨" : "선택";
+          if (btn.classList.contains("selected")) {
+            btn.classList.remove("selected");
+            btn.textContent = "선택";
+            selectedStore.delete(name);
+          } else {
+            btn.classList.add("selected");
+            btn.textContent = "선택됨";
+            selectedStore.add(name);
+          }
+          persistSelectedStore();
         });
+
+        container.appendChild(card);
       });
     }
 
-    // 하위(세부) 필터 적용
+    // 하위(세부) 필터
     function applySubFilter(cat, places) {
       const kws = SUB_FILTER[cat];
       if (!kws) return places;
@@ -333,20 +373,20 @@
       });
     }
 
-    // API 호출 (네이버 지도 기반 전용)
+    // API 호출(네이버 지도 기반)
     async function fetchRestaurantsByCategory(cat) {
       const apiCat = CATEGORY_TO_API[cat] || cat;
 
-      // '패스트푸드'는 검색어를 풍성하게
+      // '패스트푸드'는 검색어 확장
       let cuisineForQuery = apiCat;
       if (apiCat === "패스트푸드") {
         cuisineForQuery = "패스트푸드 분식 치킨 피자 버거 샌드위치";
       }
 
       const payload = {
-        destination: localStorage.getItem('selectedLocation') || '서울',
-        cuisine: cuisineForQuery,                      // 한식/양식/중식/일식/카페/패스트푸드(확장 키워드)
-        sort: sortSelect.value || 'review',           // review | rating | distance
+        destination: getDestination() || '서울',
+        cuisine: cuisineForQuery,                // 한식/양식/중식/일식/카페/패스트푸드(확장)
+        sort: sortSelect.value || 'review',     // review | rating | distance
         limit: 12,
         companions: JSON.parse(localStorage.getItem('selectedCompanions') || '[]'),
         styles: JSON.parse(localStorage.getItem('selectedStyles') || '[]'),
@@ -355,10 +395,7 @@
         center_lng: Number(localStorage.getItem('centerLng')) || null,
       };
 
-      console.log("[food] payload:", payload);
-
       try {
-        // ✅ GPT 경유 X, 네이버 지도 기반 엔드포인트
         const res = await fetch(`${API_BASE}/api/food/recommend`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -368,9 +405,7 @@
 
         const data = await res.json().catch(() => ({}));
         let places = data.items || data.places || [];
-        // 세부 필터(분식/치킨/피자 선택 시)
-        places = applySubFilter(cat, places);
-        console.log(`[food] backend→render (${cat}/${apiCat}):`, places.slice(0, 3));
+        places = applySubFilter(cat, places);   // 분식/치킨/피자 세분화
         return places;
       } catch (e) {
         console.error("음식점 API 에러:", e);
@@ -378,7 +413,7 @@
       }
     }
 
-    // 카테고리 UI 상태
+    // 카테고리 UI 활성화
     function activateCategoryItem(item) {
       document.querySelectorAll('.category-item').forEach(i => {
         i.querySelector('img').classList.add('inactive');
@@ -419,21 +454,41 @@
       await handleCategoryChange(selectedCategory, item);
     });
 
-    // 완료: 선택된 맛집 저장 + 카테고리 저장
-    document.getElementById("done-btn").addEventListener("click", () => {
-      const selected = [];
-      document.querySelectorAll(".location-card").forEach(card => {
-        const btn = card.querySelector(".select-btn");
-        if (btn && btn.classList.contains("selected")) {
-          const name = card.querySelector(".location-name")?.textContent?.trim();
-          if (name) selected.push(name);
-        }
-      });
-      localStorage.setItem("selectedRestaurants", JSON.stringify(selected));
-      localStorage.setItem("selectedFoodCategory", selectedCategory);
-      localStorage.setItem('selectedLocation','서울');
+    // 완료: 선택 저장(백엔드 저장 시도 → 실패해도 로컬 저장 후 진행)
+    document.getElementById("done-btn").addEventListener("click", async () => {
+      const finalSelected = Array.from(selectedStore);
+      const destination = getDestination();
 
-      location.href = "justgoset.html";
+      if (!destination) {
+        alert("여행지가 설정되지 않았습니다. 먼저 여행지를 선택해주세요.");
+        return;
+      }
+      if (finalSelected.length === 0) {
+        alert("선택된 음식점이 없어요.");
+        return;
+      }
+
+      let ok = false;
+      try {
+        const res = await fetch(`${API_BASE}/api/selection/places`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            destination,
+            places: finalSelected,
+            category: "restaurant"
+          })
+        });
+        ok = res.ok;
+      } catch (e) {
+        console.warn("백엔드 저장 실패, 로컬로만 진행:", e);
+      } finally {
+        // 로컬에도 저장(항상)
+        persistSelectedStore();
+        localStorage.setItem("selectedFoodCategory", selectedCategory);
+        if (!ok) alert("서버 저장에 실패했습니다. 선택은 로컬에 저장하고 다음 단계로 이동합니다.");
+        location.href = "justgoset.html";
+      }
     });
 
     // 다음에 하기
@@ -463,6 +518,5 @@
       document.querySelector('.category-carousel').scrollLeft = 0;
     });
   </script>
-
 </body>
 </html>

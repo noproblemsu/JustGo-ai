@@ -5,11 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>여행지 선택</title>
   <style>
+/********************************************/
     html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
+  height: 100vh;       /* 창 전체 높이 */
+  width: 100vw;        /* 창 전체 너비 */
+  margin: 0;
+  padding: 0;
+  display: flex;       /* 중앙 배치 */
+  justify-content: center;
+  align-items: center; /* ✅ 세로 중앙 */
+  background-color: #f0f0f0;
+}
+
+/*******************************************/
 
     body {
       font-family: 'Istok Web', sans-serif;
@@ -30,17 +38,21 @@
     }
 
     /* ===== 공통 ===== */
+/*****************************************************/
     .container {
-      background-color: #ffffff;
-      width: 100%;
-      max-width: 393px;
-      min-height: 852px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 72px 16px 43px;
-    }
+  position: relative;
+  background-color: #ffffff;
+  width: 393px;
+  height: 787px;              /* ✅ 원하면 680~720으로 조절 */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* space-between 제거 */
+  padding: 72px 16px 43px;
+}
+
+
+/*********************************************************/
 
     .title {
       font-family: 'Istok Web', sans-serif;
@@ -98,16 +110,16 @@
       color: #ffffff;
       outline: none;
     }
-
+/*************************************/
     #main-section .page-footer {
-      margin-top: auto;
+      margin-top: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       flex-shrink: 0;
-      margin-bottom: 72px;
+      margin-bottom: 0;
     }
-
+/***************************************/
     #main-section .btn-primary {
       background-color: #0059ff;
       border-radius: 8px;
@@ -154,15 +166,15 @@
       height: auto;
       margin-top: 48px;
     }
-
+/********************************************/
     #destination-screen .actions-footer {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 72px;
+      gap: 0;
+      margin-bottom: 0;
     }
-
+/********************************************/
     #destination-screen .button-complete {
       display: flex;
       justify-content: center;
@@ -184,21 +196,65 @@
     }
     
 
-    /* ===== 반응형 ===== */
-    @media (max-width: 393px) {
-      body {
-        align-items: flex-start;
-        background-color: #ffffff;
-      }
-      .container {
-        min-height: 100vh;
-        padding-top: 76px;
-        padding-bottom: 39px;
-      }
-      #main-section .chip-grid {
-        gap: 15px;
-      }
-    }
+
+/***************************************************/
+    /* ===== 좌표 고정 (메인 섹션) ===== */
+#main-section .btn-primary,
+#destination-screen .button-complete {
+  position: absolute;
+  left: 16px;
+  top: 652.5px;
+  width: 361px;
+  height: 55px;
+  background-color: #0059ff;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 18px;
+  border: none;
+  cursor: pointer;
+    display: flex;
+  justify-content: center;
+  align-items: center;
+}
+/***************************************/
+#main-section .skip-link,
+#destination-screen .link-skip {
+  position: absolute;
+  top: 707.5px;
+  left: 50%;
+  transform: translateX(-50%); /* ✅ 가로 중앙 */
+  font-size: 12px;
+}
+/*****************************************/
+
+/* ===== 좌표 고정 (직접 입력 섹션) ===== */
+#destination-screen .button-complete {
+  position: absolute;
+  left: 16px;
+  top: 600px;
+  width: 361px;
+  height: 55px;
+  background-color: #0059ff;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/****************************************************/
+#destination-screen .link-skip {
+  position: absolute;
+  top: 670px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #000000;
+  text-align: center;
+}
+/*************************************************/
   </style>
 </head>
 <body>
@@ -247,6 +303,7 @@
         <a href="#" class="link-skip">다음에 하기</a>
       </footer>
     </div>
+    
   </section>
 
   
@@ -255,6 +312,19 @@
 <script>
   const chips = document.querySelectorAll("#main-section .chip");
   let selectedDestination = null;
+//////////////////////////////////////////////////////////////
+  // ✅ 기존 저장된 여행지가 있으면 칩 자동 선택
+const savedLocation = localStorage.getItem("selectedLocation");
+if (savedLocation) {
+  chips.forEach(chip => {
+    if (chip.textContent.trim() === savedLocation) {
+      chip.classList.add("active");
+      selectedDestination = savedLocation;
+    }
+  });
+}
+////////////////////////////////////////////////////
+
 
   // 여행지 버튼 클릭
   chips.forEach(chip => {
@@ -274,20 +344,28 @@
       }
     });
   });
+////////////////////////////////////////////////////////////////////////////////
+  // ✅ 직접 입력 완료 버튼 클릭 시 (셋에서 왔으면 셋으로 복귀)
+document.querySelector(".button-complete").addEventListener("click", (e) => {
+  e.preventDefault(); // a 태그 기본 이동 방지
 
-  // ✅ 직접 입력 완료 버튼 클릭 시
-  document.querySelector(".button-complete").addEventListener("click", () => {
-    const inputValue = document.querySelector(".input-real").value.trim();
+  const inputValue = document.querySelector(".input-real").value.trim();
+  if (inputValue === "") {
+    alert("여행지를 입력해주세요.");
+    return;
+  }
 
-    if (inputValue === "") {
-      alert("여행지를 입력해주세요.");
-      return;
-    }
+  selectedDestination = inputValue;
+  localStorage.setItem("selectedLocation", selectedDestination);
 
-    selectedDestination = inputValue;
-    localStorage.setItem("selectedLocation", selectedDestination);
-    location.href = "justgocalendar.html";
-  });
+  const fromPage = new URLSearchParams(window.location.search).get("from");
+  if (fromPage === "justgoset.html") {
+    location.href = "justgoset.html";      // ✅ 설정 페이지로 복귀
+  } else {
+    location.href = "justgocalendar.html"; // 기존 플로우
+  }
+});
+/////////////////////////////////////////////////////
 
   // ✅ 완료 버튼 클릭 (선택된 칩 기준)
   document.getElementById("submit-btn").addEventListener("click", () => {
@@ -312,24 +390,32 @@
 document.querySelector("#main-section .skip-link").addEventListener("click", handleSkip);
 document.querySelector("#destination-screen .link-skip").addEventListener("click", handleSkip);
 
+///////////////////////////////////////////////////////
+ function handleSkip(e) {
+  // a 태그 기본 이동 방지 (깜빡임 방지)
+  if (e && e.preventDefault) e.preventDefault();
 
-  function handleSkip() {
   const urlParams = new URLSearchParams(window.location.search);
   const fromPage = urlParams.get("from");
 
-  localStorage.removeItem("selectedLocation");
-  localStorage.removeItem("selectedDates");
-  localStorage.removeItem("selectedCompanions");
-  localStorage.removeItem("hasPet");
-  localStorage.removeItem("selectedStyles");
-  localStorage.setItem("skipRecommendation", "true");
-
   if (fromPage === "justgoset.html") {
+    // ✅ justgoset에서 온 경우: 값 유지
+    localStorage.setItem("skipRecommendation", "true");
     location.href = "justgoset.html";
   } else {
+    // ✅ 다른 경우: 기존처럼 값 삭제
+    localStorage.removeItem("selectedLocation");
+    localStorage.removeItem("selectedDates");
+    localStorage.removeItem("selectedCompanions");
+    localStorage.removeItem("hasPet");
+    localStorage.removeItem("selectedStyles");
+    localStorage.setItem("skipRecommendation", "true");
+
     location.href = "justgocalendar.html";
   }
 }
+
+//////////////////////////////////////////
 
 </script>
 

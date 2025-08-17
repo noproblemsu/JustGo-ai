@@ -22,18 +22,23 @@
     * {
       box-sizing: border-box;
     }
-
+  /***********************************************************/
     .budget-container {
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      align-items: stretch;
-      max-width: 393px;
-      height: 100vh;
-      margin: 0 auto;
-      background-color: var(--background-color);
-      padding: 0 16px;
+  position: relative;           /* ✅ 절대좌표 기준 */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+
+  width: 393px;                 /* ✅ 고정 폭 */
+  height: 787px;                /* ✅ 고정 높이 (필요시 680~820 조절) */
+  margin: 0 auto;
+  padding: 0 16px;
+
+  background-color: var(--background-color);
+  overflow: hidden;
+
     }
+    /***********************************************************/
 
     .all-content {
       margin-top: 48px;
@@ -90,28 +95,40 @@
       margin-bottom: 12px;
       margin-top: 3px;
     }
+/**********************************************************************************/
+    /* ③ 완료 버튼: 절대좌표 + 글자 가로/세로 중앙 */
+.action-button {
+  position: absolute;
+  left: 16px;
+  top: 652.5px;          /* 더 아래로 내리고 싶으면 숫자 키우면 됨 */
+  width: 361px;          /* 393 - 좌우 패딩(16*2) */
+  height: 55px;
 
-    .action-button {
-      width: 100%;
-      height: 55px;
-      background-color: var(--primary-color);
-      border: none;
-      border-radius: 8px;
-      color: var(--text-color-secondary);
-      font-weight: 700;
-      font-size: 18px;
-      line-height: 1;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+  display: flex;         /* ✅ 텍스트 정확히 중앙 */
+  justify-content: center;
+  align-items: center;
 
-    .skip-link {
-      font-size: 12px;
-      color: var(--text-color-primary);
-      text-decoration: none;
-    }
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 8px;
+  color: var(--text-color-secondary);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ④ "다음에 하기" 링크: 가로 정확히 중앙 */
+.skip-link {
+  position: absolute;
+  top: 720px;          /* 완료 버튼과 간격 맞춤. 필요시 조절 */
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--text-color-primary);
+  text-decoration: none;
+}
+/**********************************************************************************/
   </style>
 </head>
 <body>
@@ -131,7 +148,6 @@
         </div>
       </main>
 
-      <div style="height: 460px;"></div>
 
       <footer class="footer-actions">
         <button id="submitBudget" class="action-button">완료</button>
@@ -141,12 +157,22 @@
   </div>
 
 <script>
-  const urlParams = new URLSearchParams(window.location.search);
+  ////////////////////////////////////////////////////////////////
+const urlParams = new URLSearchParams(window.location.search);
 const fromPage = urlParams.get("from");
 
 const input = document.getElementById('budgetInput');
 const submitButton = document.getElementById('submitBudget');
 const skipLink = document.querySelector('.skip-link');
+
+// ✅ justgoset에서 돌아온 경우 기존 예산 표시
+if (fromPage === "justgoset.html") {
+  const savedBudget = localStorage.getItem('budget');
+  if (savedBudget) {
+    // 3자리 콤마 넣어서 표시
+    input.value = savedBudget.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+}
 
 // ✅ 입력 시 자동 콤마 처리
 input.addEventListener('input', () => {
@@ -176,15 +202,20 @@ submitButton.addEventListener('click', () => {
 // ✅ 다음에 하기 클릭 시
 skipLink.addEventListener('click', (e) => {
   e.preventDefault();
-  localStorage.removeItem('budget');
 
   if (fromPage === "justgoset.html") {
+    // 값 유지
+    localStorage.setItem("skipRecommendation", "true");
     location.href = "justgoset.html";
   } else {
+    // 값 삭제
+    localStorage.removeItem('budget');
+    localStorage.setItem("skipRecommendation", "true");
     location.href = "justgostyle.html";  // 다음 단계로 이동
   }
 });
 
+/////////////////////////////////////////////////////
 </script>
 
 
