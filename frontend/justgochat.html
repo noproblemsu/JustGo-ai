@@ -72,7 +72,7 @@
       <section class="hero">
         <h1 class="title">📅 추천 일정</h1>
         <div id="subtitle" class="subtitle"></div>
-        <div id="notice" class="notice">카드를 클릭하면 채팅창이 펼쳐져요.</div>
+        <div id="notice" class="notice">카드를 클릭해 편집하고, 채팅창 상단의 ‘일정 확정’을 누르면 최종 화면으로 이동합니다.</div>
         <div id="error" class="error"></div>
       </section>
 
@@ -83,7 +83,7 @@
           <div class="chat-title" id="chat-title">일정 대화</div>
           <div class="mode-tabs">
             <button id="tab-edit" class="active">일정 편집</button>
-            <button id="tab-free">자유 대화</button>
+            <button id="btn-confirm">일정 확정</button>
           </div>
           <button class="chat-close" id="chat-close">닫기</button>
         </div>
@@ -100,8 +100,7 @@
     /* ===== 엔드포인트 ===== */
     const API_PLAN      = "http://127.0.0.1:8000/api/plan";
     const CHAT_ENDPOINT = "http://127.0.0.1:8000/api/chat";
-    const TALK_ENDPOINT = "http://127.0.0.1:8000/api/talk";
-    const PLAN_COUNT = 3; // ✅ 3개 일정 요청
+    const PLAN_COUNT = 1; // ✅ 3개 일정 요청
 
     /* ===== 유틸 ===== */
     const $ = (s)=>document.querySelector(s);
@@ -209,17 +208,15 @@
     });
     document.addEventListener("click",(e)=>{ if(e.target.id==="chat-close"){ $("#chat").style.display="none"; selectedIndex=null; } });
     $("#tab-edit").addEventListener("click",()=>{ setChatMode("edit"); if(selectedIndex!=null) addMsg("bot","편집 모드로 전환했어요. 바꾸고 싶은 내용을 말해 주세요."); else addMsg("bot","먼저 카드를 눌러 일정을 선택해 주세요."); });
-    $("#tab-free").addEventListener("click",()=>{ setChatMode("free"); addMsg("bot","자유 대화 모드로 전환했어요. 무엇이든 물어보세요!"); });
 
     function setChatMode(mode){
-      chatMode=mode;
-      $("#tab-edit").classList.toggle("active",mode==="edit");
-      $("#tab-free").classList.toggle("active",mode==="free");
-      $("#chat-input").placeholder = mode==="free" ? "자유롭게 물어보세요 (예: 경주월드 운영시간 알려줘)" : "메시지를 입력하세요 (예: 2일차 저녁을 더 가볍게)";
-      if(mode==="free") $("#chat-title").textContent="🗣️ 자유 대화";
-      else if(selectedIndex!=null) $("#chat-title").textContent=`💬 ${itineraries[selectedIndex].title} 대화`;
-      else $("#chat-title").textContent="💬 일정 대화";
+      chatMode = "edit"; // 자유대화 제거 -> 항상 편집 모드
+      $("#tab-edit").classList.add("active");
+      $("#chat-input").placeholder = "메시지를 입력하세요 (예: 2일차 저녁을 더 가볍게)";
+      if (selectedIndex != null) $("#chat-title").textContent = `💬 ${itineraries[selectedIndex].title} 대화`;
+      else $("#chat-title").textContent = "💬 일정 대화";
     }
+
 
     $("#chat-send").addEventListener("click", sendMessage);
     $("#chat-input").addEventListener("keydown",(e)=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); } });
@@ -229,18 +226,19 @@
       addMsg("me",msg); input.value="";
       const ctx=getContext();
 
-      // 자유 대화 → /api/talk (q + 컨텍스트)
-      if(chatMode==="free"){
-        try{
-          const payload = { q: msg, ...ctx, limit: 5 };
-          const res=await fetch(TALK_ENDPOINT,{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload) });
-          if(!res.ok) throw new Error("HTTP "+res.status);
-          const data=await res.json();
-          const reply = data.reply || data.answer || data.result || data.message || "응답이 없어요.";
-          addMsg("bot", reply);
-        }catch(e){ console.error(e); addMsg("bot","(서버 오류) 잠시 후 다시 시도해 주세요."); }
-        return;
-      }
+      // 일정 확정 → localStorage 저장 후 justgofinal.html로 이동
+      document.getElementById("btn-confirm").addEventListener("click", () => {
+        // 선택된 카드가 없으면 첫 번째 일정을 기본으로 사용
+        const idx = (selectedIndex != null) ? selectedIndex : 0;
+        if (!itineraries[idx]) {
+          alert("확정할 일정이 없어요. 먼저 카드를 눌러 일정을 확인해주세요.");
+          return;
+        }
+        const full = itineraries[idx].fullText || "";
+        localStorage.setItem("finalSchedule", full);
+        window.location.href = "justgofinal.html";
+      });
+
 
       // 일정 편집 → /api/chat
       if(selectedIndex==null){ addMsg("bot","먼저 카드를 눌러 편집할 일정을 선택해 주세요!"); return; }

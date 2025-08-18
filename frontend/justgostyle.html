@@ -196,18 +196,18 @@
 <script>
   /////////////////////////////////////////////////////
   const urlParams = new URLSearchParams(window.location.search);
-const fromPage = urlParams.get("from");
+  const fromPage = urlParams.get("from");
 
-// 태그 버튼 토글
-const tagButtons = document.querySelectorAll('.tag-button');
-tagButtons.forEach(button => {
-  button.addEventListener('click', () => {
-    button.classList.toggle('selected');
+  // 태그 버튼 토글
+  const tagButtons = document.querySelectorAll('.tag-button');
+  tagButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      button.classList.toggle('selected');
+    });
   });
-});
 
-// 슬라이더 기능
- const sliderTrack  = document.getElementById('sliderTrack');
+  // 슬라이더 기능
+  const sliderTrack  = document.getElementById('sliderTrack');
   const sliderHandle = document.getElementById('sliderHandle');
 
   // [추가] 앵커(퍼센트) & 라벨
@@ -217,6 +217,7 @@ tagButtons.forEach(button => {
   // 현재 상태
   let sliderPercent = 50;          // 0 | 50 | 100
   let sliderCategory = 'medium';   // 'light' | 'medium' | 'hard'
+  let sliderValue = 50;            // ✅ 추가: submitSelections에서 사용하는 값
 
   // 핸들 위치 설정
   function setHandle(pct) {
@@ -242,6 +243,7 @@ tagButtons.forEach(button => {
     });
     setHandle(ANCHORS[nearestIdx]);
     sliderCategory = LABELS[nearestIdx];
+    sliderValue = ANCHORS[nearestIdx];  // ✅ 추가: 현재 값 동기화
   }
 
   // [수정] 드래그: 이동은 자유, 마우스 업 시 스냅
@@ -283,71 +285,68 @@ tagButtons.forEach(button => {
     snapToNearest(percentFromClientX(t.clientX));
   }, { passive: true });
 
-// ✅ 기존 저장값 복원 (justgoset에서 온 경우만)
-if (fromPage === "justgoset.html") {
-  const savedCompanions = JSON.parse(localStorage.getItem('selectedCompanions') || "[]");
-  const savedStyles = JSON.parse(localStorage.getItem('selectedStyles') || "[]");
-  const savedIntensity = localStorage.getItem('travelIntensity');
-
-  // 동반자 복원
-  document.querySelectorAll('.companion-tags .tag-button').forEach(btn => {
-    if (savedCompanions.includes(btn.textContent)) {
-      btn.classList.add('selected');
-    }
-  });
-
-  // 스타일 복원
-  document.querySelectorAll('.style-tags .tag-button').forEach(btn => {
-    if (savedStyles.includes(btn.textContent)) {
-      btn.classList.add('selected');
-    }
-  });
-
-  // 강도 복원
-  if (savedIntensity !== null) {
-    const percent = parseInt(savedIntensity, 10);
-    sliderHandle.style.left = `${percent}%`;
-    sliderValue = percent;
-  }
-}
-
-// 완료 버튼 클릭 시
-function submitSelections() {
-  const selectedCompanions = Array.from(document.querySelectorAll('.companion-tags .tag-button.selected')).map(btn => btn.textContent);
-  const selectedStyles = Array.from(document.querySelectorAll('.style-tags .tag-button.selected')).map(btn => btn.textContent);
-
-  const hasPet = selectedCompanions.includes("반려견과");
-
-  localStorage.setItem('selectedCompanions', JSON.stringify(selectedCompanions));
-  localStorage.setItem('selectedStyles', JSON.stringify(selectedStyles));
-  localStorage.setItem('hasPet', hasPet.toString());
-  localStorage.setItem('travelIntensity', sliderValue.toString());
-
+  // ✅ 기존 저장값 복원 (justgoset에서 온 경우만)
   if (fromPage === "justgoset.html") {
-    window.location.href = 'justgoset.html';
-  } else {
+    const savedCompanions = JSON.parse(localStorage.getItem('selectedCompanions') || "[]");
+    const savedStyles = JSON.parse(localStorage.getItem('selectedStyles') || "[]");
+    const savedIntensity = localStorage.getItem('travelIntensity');
+
+    // 동반자 복원
+    document.querySelectorAll('.companion-tags .tag-button').forEach(btn => {
+      if (savedCompanions.includes(btn.textContent)) {
+        btn.classList.add('selected');
+      }
+    });
+
+    // 스타일 복원
+    document.querySelectorAll('.style-tags .tag-button').forEach(btn => {
+      if (savedStyles.includes(btn.textContent)) {
+        btn.classList.add('selected');
+      }
+    });
+
+    // 강도 복원
+    if (savedIntensity !== null) {
+      const percent = parseInt(savedIntensity, 10);
+      sliderHandle.style.left = `${percent}%`;
+      sliderValue = percent;              // ✅ 존재하던 코드, 이제 정상 동작
+      sliderPercent = percent;            // (선택) 내부 상태 동기화
+    }
+  }
+
+  // 완료 버튼 클릭 시
+  function submitSelections() {
+    const selectedCompanions = Array.from(document.querySelectorAll('.companion-tags .tag-button.selected')).map(btn => btn.textContent);
+    const selectedStyles = Array.from(document.querySelectorAll('.style-tags .tag-button.selected')).map(btn => btn.textContent);
+
+    const hasPet = selectedCompanions.includes("반려견과");
+
+    localStorage.setItem('selectedCompanions', JSON.stringify(selectedCompanions));
+    localStorage.setItem('selectedStyles', JSON.stringify(selectedStyles));
+    localStorage.setItem('hasPet', hasPet.toString());
+    localStorage.setItem('travelIntensity', sliderValue.toString());
+
+    // ✅ 무조건 justgotour.html 로 이동
     window.location.href = 'justgotour.html';
   }
-}
 
-// ✅ 다음에 하기 클릭 시
-document.getElementById('skipLink').addEventListener('click', function (e) {
-  e.preventDefault();
+  // ✅ 다음에 하기 클릭 시
+  document.getElementById('skipLink').addEventListener('click', function (e) {
+    e.preventDefault();
 
-  if (fromPage === "justgoset.html") {
-    // 기존 값 유지
-    window.location.href = 'justgoset.html';
-  } else {
-    // 값 삭제
-    localStorage.removeItem('selectedCompanions');
-    localStorage.removeItem('selectedStyles');
-    localStorage.removeItem('hasPet');
-    localStorage.removeItem('travelIntensity');
-    window.location.href = 'justgotour.html';
-  }
-});
-//////////////////////////////////////////
-
+    if (fromPage === "justgoset.html") {
+      // 기존 값 유지
+      window.location.href = 'justgoset.html';
+    } else {
+      // 값 삭제
+      localStorage.removeItem('selectedCompanions');
+      localStorage.removeItem('selectedStyles');
+      localStorage.removeItem('hasPet');
+      localStorage.removeItem('travelIntensity');
+      window.location.href = 'justgotour.html';
+    }
+  });
+  //////////////////////////////////////////
 </script>
 
 </body>
