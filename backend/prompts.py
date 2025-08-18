@@ -4,6 +4,36 @@ from datetime import datetime, date, timedelta
 from typing import List, Union
 from textwrap import dedent
 
+def build_prompt(location, days, budget, companions, style, selected_places, travel_date, count=1):
+    # ... (생략)
+    prompt = f"""
+당신은 여행 설계 보조 AI입니다. 아래 정보를 모두 반영하여 **단 하나의 일정만** 작성하세요.
+
+[조건]
+- 일정은 {days}일(아침/점심/저녁 포함)로 작성.
+- 제목은 반드시 `일정추천 1`로 시작하고, 다음 줄에 `---` 구분선을 넣으세요.
+- 각 날짜는 빠짐없이 작성.
+- 총 예상 비용은 일정 **마지막에 한 번만** 표기.
+- 총 예상 비용은 예산 {budget:,}원의 ±15% 범위를 절대 벗어나지 않도록 하세요.
+
+[사용자 정보]
+- 여행지: {location}
+- 예산: {budget:,}원
+- 동반자: {companions}
+- 여행 스타일: {style}
+- 선택 장소(있으면 반영): 
+{selected_str}
+
+[출력 형식 예]
+일정추천 1
+---
+2025-08-18 (Day1)
+- 08:00 ~ 09:00: ...
+...
+총 예상 비용: 180,000원
+"""
+    return prompt
+
 def build_prompt(
     location: str,
     days: Union[int, str],

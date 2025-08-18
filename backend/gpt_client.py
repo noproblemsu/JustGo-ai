@@ -65,7 +65,7 @@ def generate_schedule_gpt(
     budget: int,
     selected_places: List[str],
     travel_date: str,
-    count: int = 3,
+    count: int = 1,
 ) -> str:
     if client is None:
         return (

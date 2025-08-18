@@ -118,7 +118,7 @@ async def _run_gpt_blocking(
             budget=budget,
             selected_places=[],
             travel_date=travel_date,
-            count=3,
+            count=1,
         )
 
         # GPT에게 실제 답변 받기

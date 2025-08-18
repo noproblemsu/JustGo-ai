@@ -1236,7 +1236,7 @@ def create_plan(req: ScheduleRequest):
             detail = ensure_costs_per_line(detail, req.location, req.budget)
 
             # (7) 총비용 문구 제거 → 재계산 후 1회만 표기
-            detail = re.sub(r"총 예상 비용.*?원\W*", "", detail)
+            detail = re.sub(r"(?m)^\s*총 예상 비용[^\n]*\n?", "", detail)
             cost = parse_total_cost(detail)
             detail += f"\n\n총 예상 비용은 약 {cost:,}원으로, 입력 예산인 {req.budget:,}원 내에서 잘 계획되었어요."
 
@@ -1611,13 +1611,41 @@ def _postprocess_itinerary(text: str, fallback_city: Optional[str], budget: Opti
         pass
 
     # 총액 문구는 항상 1회만
-    t = re.sub(r"총 예상 비용.*?원\W*", "", t)
+    t = re.sub(r"(?m)^\s*총 예상 비용[^\n]*\n?", "", t)
     total = parse_total_cost(t)
     if budget is not None:
         t += f"\n\n총 예상 비용은 약 {total:,}원으로, 입력 예산인 {budget:,}원 기준으로 조정했어요."
     else:
         t += f"\n\n총 예상 비용은 약 {total:,}원으로 조정했어요."
     return t
+# --- 메세지에서 "n일차" 추출 ---
+_DAY_IN_MSG = re.compile(r"(?:^|\s)(?:Day\s*(\d+)|(\d+)\s*일차)\b", re.I)
+
+def _extract_day_from_msg(message: str) -> Optional[int]:
+    m = _DAY_IN_MSG.search(message or "")
+    if not m:
+        return None
+    for g in m.groups():
+        if g:
+            try:
+                return int(g)
+            except:
+                pass
+    return None
+
+# --- 본문에서 날짜 헤더 블록들 범위 찾기 ---
+def _iter_day_blocks(lines: list[str]) -> list[tuple[int, int, int]]:
+    """
+    return: [(day_no, start_idx, end_idx), ...]
+    day_no는 헤더 순서(1부터) 기준으로 부여
+    """
+    # 날짜 헤더 라인 위치
+    hdr_idx = [i for i, ln in enumerate(lines) if _DATE_HDR_RE.match(ln.strip())]
+    blocks: list[tuple[int, int, int]] = []
+    for i, start in enumerate(hdr_idx):
+        end = hdr_idx[i + 1] if i + 1 < len(hdr_idx) else len(lines)
+        blocks.append((i + 1, start, end))
+    return blocks
 
 _HOUR_IN_MSG = re.compile(r"(\d{1,2})\s*시")
 def _shift_time_span(span: str, new_start_hour: int) -> str:
@@ -1633,6 +1661,71 @@ def _shift_time_span(span: str, new_start_hour: int) -> str:
     eH2, eM2 = (end//60)%24, end%60
     return f"{new_start_hour:02d}:{sM:02d} ~ {eH2:02d}:{eM2:02d}"
 
+# 일차 추출: "2일차" 또는 "Day 2"
+_DAY_IN_MSG = re.compile(r"(?:^|\s)(?:Day\s*(\d+)|(\d+)\s*일차)\b", re.I)
+def _extract_day_from_msg(message: str) -> Optional[int]:
+    m = _DAY_IN_MSG.search(message or "")
+    if not m:
+        return None
+    for g in m.groups():
+        if g:
+            try: return int(g)
+            except: pass
+    return None
+
+# 본문에서 날짜 헤더 블록 범위 찾기 (day_no, start_idx, end_idx)
+def _iter_day_blocks(lines: list[str]) -> list[tuple[int, int, int]]:
+    hdr_idx = [i for i, ln in enumerate(lines) if _DATE_HDR_RE.match(ln.strip())]
+    blocks: list[tuple[int, int, int]] = []
+    for i, start in enumerate(hdr_idx):
+        end = hdr_idx[i + 1] if i + 1 < len(hdr_idx) else len(lines)
+        blocks.append((i + 1, start, end))
+    return blocks
+
+# 끼니 판별: 라벨(아침/점심/저녁) OR 시간대(아침 07:00~10:30, 점심 11:00~14:30, 저녁 17:00~21:30)
+def _is_meal_line(s: str, meal: str) -> bool:
+    s = (s or "").strip()
+    if meal == "아침":
+        if re.search(r"(아침|브런치)", s): return True
+        m = re.search(r"(\d{2}):(\d{2})\s*~", s)
+        if m:
+            sh, sm = int(m.group(1)), int(m.group(2))
+            start = sh*60 + sm
+            return 7*60 <= start <= 10*60+30
+        return False
+    if meal == "점심":
+        if re.search(r"(점심|런치)", s): return True
+        m = re.search(r"(\d{2}):(\d{2})\s*~", s)
+        if m:
+            sh, sm = int(m.group(1)), int(m.group(2))
+            start = sh*60 + sm
+            return 11*60 <= start <= 14*60+30
+        return False
+    # 저녁
+    if re.search(r"(저녁|디너)", s): return True
+    m = re.search(r"(\d{2}):(\d{2})\s*~", s)
+    if m:
+        sh, sm = int(m.group(1)), int(m.group(2))
+        start = sh*60 + sm
+        return 17*60 <= start <= 21*60+30
+    return False
+
+# 가벼운 식사로 바꾸기(끼니별 비용 다르게)
+def _lighten_meal(line: str, meal_label: str) -> str:
+    label_map = {
+        "아침": "아침(가벼운 빵·커피)",
+        "점심": "점심(가벼운 간단식/분식/샐러드)",
+        "저녁": "저녁(가벼운 간단식/분식/샐러드)",
+    }
+    target_cost = 6000 if meal_label == "아침" else 8000
+    l = re.sub(rf"{meal_label}[^\(]*", label_map.get(meal_label, meal_label), line)
+    if re.search(r"\d+\s*원", l):
+        l = re.sub(r"(약\s*)?(\d{1,3}(?:,\d{3})+|\d+)\s*원", f"약 {target_cost:,}원", l)
+    else:
+        l += f" (약 {target_cost:,}원)"
+    return l
+
+
 def _lighten_dinner(line: str) -> str:
     line = re.sub(r"저녁[^\(]*", "저녁(가벼운 간단식/분식/샐러드)", line)
     if re.search(r"\d+\s*원", line):
@@ -1642,9 +1735,22 @@ def _lighten_dinner(line: str) -> str:
     return line
 
 def _edit_itinerary_rules(text: str, message: str) -> tuple[str, str]:
+    """
+    규칙 기반 편집:
+    - "n일차"가 있으면 해당 날짜 블록만 수정, 없으면 모든 날짜에 적용
+    - "아침/점심/저녁" 키워드가 있으면 해당 끼니만 타깃, 없으면 기본 '저녁'
+    - "20시/8시" 등 시간이 있으면 시작시간 이동(종료는 기존 소요시간 유지)
+    - "가볍게"가 있으면 해당 끼니를 라이트하게(비용도 낮춤)
+    """
     lines = text.splitlines()
-    edited = False
-    reply = "요청을 반영했습니다."
+    want_day = _extract_day_from_msg(message)
+    # 끼니 타깃
+    meal_label = "저녁"
+    if re.search(r"(아침|브런치)", message): meal_label = "아침"
+    elif re.search(r"(점심|런치)", message):   meal_label = "점심"
+    elif re.search(r"(저녁|디너)", message):  meal_label = "저녁"
+
+    # 시간/라이트 여부
     m_hour = _HOUR_IN_MSG.search(message)
     want_hour = None
     if m_hour:
@@ -1652,23 +1758,58 @@ def _edit_itinerary_rules(text: str, message: str) -> tuple[str, str]:
             h = int(m_hour.group(1))
             if 0 <= h <= 23:
                 want_hour = h
-        except Exception:
+        except:
             pass
     want_lighter = bool(re.search(r"(가볍게|라이트|light)", message, re.I))
 
-    for i, line in enumerate(lines):
-        if "저녁" not in line:
-            continue
-        if want_hour is not None and re.search(r"\d{2}:\d{2}\s*~\s*\d{2}:\d{2}", line):
-            lines[i] = re.sub(r"\d{2}:\d{2}\s*~\s*\d{2}:\d{2}", lambda m: _shift_time_span(m.group(0), want_hour), line)
-            line = lines[i]
+    # 수정 대상을 모은다
+    targets: list[int] = []
+    blocks = _iter_day_blocks(lines)
+    if not blocks:
+        # 날짜 헤더가 없는 경우 전체에서 해당 끼니 라인 모두
+        for i, ln in enumerate(lines):
+            if _is_meal_line(ln, meal_label):
+                targets.append(i)
+
+    else:
+        for day_no, start, end in blocks:
+            if (want_day is None) or (want_day == day_no):
+                # 해당 일차 블록에서 끼니 라인들 찾기
+                for i in range(start, end):
+                    if _is_meal_line(lines[i], meal_label):
+                        targets.append(i)
+
+
+    if not targets:
+        return ("수정할 대상을 찾지 못했어요. 예: '2일차 저녁을 20시로'처럼 요청해 주세요.", text)
+
+    edited = False
+    for idx in targets:
+        line = lines[idx]
+        # 시간 변경
+        if want_hour is not None and _TIME_RE.search(line):
+            lines[idx] = re.sub(r"\d{2}:\d{2}\s*~\s*\d{2}:\d{2}",
+                                lambda m: _shift_time_span(m.group(0), want_hour),
+                                line)
+            line = lines[idx]
             edited = True
-            reply = f"저녁 시작 시간을 {want_hour}시로 조정했어요."
-        if want_lighter:
-            lines[i] = _lighten_dinner(line)
+        # 가볍게
+        if want_lighter and meal_label in ("저녁", "점심", "브런치"):
+            lines[idx] = _lighten_dinner(line)
             edited = True
-            reply = "저녁을 가벼운 식사로 바꿨어요(비용도 줄였어요)."
-    return reply, ("\n".join(lines) if edited else text)
+
+    if not edited:
+        return ("요청을 해석했지만 바뀐 내용이 없었어요. 시간을 지정하거나 '가볍게'를 함께 말해 주세요.", text)
+
+    # 답변 문구
+    parts = []
+    if want_day: parts.append(f"{want_day}일차")
+    parts.append(meal_label)
+    if want_hour is not None: parts.append(f"시작 시간을 {want_hour}시로")
+    if want_lighter: parts.append("가볍게")
+    reply = " ".join(parts) + " 변경했어요."
+
+    return reply, "\n".join(lines)
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat_edit(req: "ChatRequest"):
