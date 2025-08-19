@@ -38,16 +38,32 @@
       color: var(--text-primary);
     }
 
-    /********** 스크롤 영역: 헤더 높이만큼 위 패딩 **********/
+    /********** 스크롤 영역 분리: 상단 고정 + 리스트만 스크롤 **********/
     .page-container{
       position:absolute;
       top:0;
       bottom:112px;          /* 푸터 위로 공간 */
       left:0; right:0;
-      padding:125px 16px 0;  /* 헤더 높이 */
-      overflow:auto;
+      /* padding으로 헤더 높이를 때우지 않고, 아래 .scroll-area의 top으로 보정 */
+      overflow:hidden;       /* ✅ 전체 스크롤 끄기 */
+      display:flex; flex-direction:column;
+    }
+
+    /* 리스트 스크롤 영역: fixed-header 실제 높이만큼 아래에서 시작 */
+    .scroll-area{
+      position:absolute;
+      left:0; right:0; bottom:0;
+      top:var(--top, 125px); /* ✅ JS가 fixed-header의 실제 높이를 넣어줌 */
+      overflow:auto;         /* ✅ 여기만 스크롤 */
+      padding: 8px 16px 60px;   /* 좌우 패딩 + 하단 버튼 여유 */
       display:flex; flex-direction:column; gap:12px;
     }
+
+    /* (이전 안전 여백 규칙은 유지해도 무해하지만, 구조상 영향 없음) */
+    .page-container > *:first-child { margin-top: 0 !important; }
+    .page-container > *:first-child + * { margin-top: 8px; }
+    .page-container .result-card:first-child,
+    .page-container .place-card:first-child { margin-top: 8px; }
 
     /********** 여행지 미선택 경고 **********/
     #location-warning {
@@ -122,7 +138,7 @@
 </head>
 <body>
   <div class="container">
-    <main class="page-container">
+    <main class="page-container" id="page-container">
       <!-- 여행지 경고 -->
       <div id="location-warning">
         <p style="margin:0 0 8px;">⚠️ 여행지를 먼저 선택해주세요.</p>
@@ -166,7 +182,6 @@
             <select class="sort-select" id="food-sort">
               <option value="review">리뷰 많은 순</option>
               <option value="rating">평점 높은 순</option>
-              <!-- <option value="distance">거리 순</option> -->
             </select>
             <span class="select-arrow"></span>
           </div>
@@ -174,8 +189,10 @@
         </div>
       </div>
 
-      <!-- 결과 카드 영역 -->
-      <section class="listings-container" id="food-results"></section>
+      <!-- ✅ 결과 카드 스크롤 영역 -->
+      <div class="scroll-area" id="scroll-area">
+        <section class="listings-container" id="food-results"></section>
+      </div>
     </main>
 
     <!-- 푸터 버튼 -->
@@ -195,6 +212,16 @@
     const sortSelect    = document.getElementById('food-sort');
     const warningBox    = document.getElementById('location-warning');
     const fixedHeader   = document.getElementById('fixed-header');
+    const pageContainer = document.getElementById('page-container');
+
+    // ✅ 상단 고정 영역 실제 높이만큼 리스트 시작점 보정
+    function setListTop(){
+      if(!fixedHeader || !pageContainer) return;
+      const h = fixedHeader.offsetHeight;              // 제목+카테고리+정렬 실제 높이
+      pageContainer.style.setProperty('--top', h + 'px');
+    }
+    window.addEventListener('load', setListTop);
+    window.addEventListener('resize', setListTop);
 
     // 상태/캐시
     let selectedCategory = "한식";
@@ -250,6 +277,7 @@
       warningBox.style.display = "none";
       fixedHeader.style.display = "block";
       document.querySelector(".page-footer").style.display = "flex";
+      setListTop(); // ✅ 표시 전환 시 높이 재보정
       return true;
     }
     document.getElementById("go-select-location")?.addEventListener("click", () => {
@@ -301,7 +329,7 @@
       }
 
       resultCount.textContent = `결과 ${list.length}개`;
-      if (!list.length) { showEmpty(); return; }
+      if (!list.length) { showEmpty(); setListTop(); return; }
 
       list.forEach(p => {
         const name = (p.name || "").trim();
@@ -359,6 +387,8 @@
 
         container.appendChild(card);
       });
+
+      setListTop(); // ✅ 목록 길이에 상관없이 상단 높이 보정 유지
     }
 
     // 하위(세부) 필터
@@ -499,7 +529,7 @@
     });
 
     // 안전장치: 어떤 링크든 지도 링크로 강제
-    container.addEventListener("click", (e) => {
+    document.getElementById('food-results').addEventListener("click", (e) => {
       const a = e.target.closest("a");
       if (!a) return;
       if (!a.href.includes("map.naver.com")) {
@@ -516,6 +546,7 @@
       const firstItem = document.querySelector('.category-item[data-category="한식"]');
       handleCategoryChange("한식", firstItem);
       document.querySelector('.category-carousel').scrollLeft = 0;
+      setListTop(); // ✅ 첫 로드 시 보정
     });
   </script>
 </body>
