@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
   <title>추천 일정</title>
   <style>
+    /* 화면: 가로 가운데, 세로 상단 + 회색 바깥배경 */
+html, body{
+  min-height: 100vh; width: 100vw;
+  margin: 0; padding: 0;
+  display: flex; justify-content: center; align-items: flex-start;
+  background: #f0f0f0;   /* 카드 밖 회색 */
+}
+/* 회색만 보이도록 body는 투명 */
+body{ background: transparent; }
+
     :root{
       --primary-blue:#0059ff;
       --border-blue:#0055ff;
@@ -20,12 +30,26 @@
       font-family:Inter,"Istok Web","Apple SD Gothic Neo",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
       background:var(--bg); color:var(--text-dark);
     }
-    .page-wrap{ max-width:390px; min-height:100dvh; margin:0 auto; background:var(--bg-white); display:flex; flex-direction:column; overflow:hidden; }
+    .page-wrap{
+  position: relative;
+  width: 393px;
+  height: 787px;                 /* ✅ 고정 높이 */
+  margin: 0 auto;
+  background: #fff;              /* 카드 배경 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; 
+    }
 
     .app-header{ background-color:#0059ff; height:66px; display:flex; justify-content:flex-end; align-items:center; padding:11px 16px; }
     .home-icon{ width:30px; height:30px; display:block; }
 
-    .content{ flex:1; overflow:auto; background:#fafafa; }
+    .content{
+  flex: 1;
+  overflow: auto;
+  background: #fafafa;
+  padding-bottom: 160px;   /* ✅ 채팅 박스 자리 확보 */
+}
     .hero{ padding:14px 16px 6px; background:#fafafa; border-bottom:1px solid var(--border); }
     .title{ margin:0 0 6px; font-size:18px; font-weight:800; }
     .subtitle{ color:#555; margin:2px 0; font-size:13px; }
@@ -40,7 +64,20 @@
     .trip-line{ margin-top:8px; font-size:12px; color:#4b5563; user-select:none; }
     .details{ margin-top:8px; border-top:1px dashed #e6eaf2; padding-top:8px; font-size:12.5px; color:#374151; background:#fff; }
 
-    .chat{ position:sticky; bottom:0; background:#fff; border-top:1px solid var(--border); box-shadow:0 -6px 20px rgba(0,0,0,.08); border-top-left-radius:16px; border-top-right-radius:16px; padding:10px 12px 12px; margin-top:2px; display:none; }
+    .chat{
+  position: absolute;   /* ✅ sticky → absolute */
+  left: 0; right: 0; bottom: 0;
+  background: #fff;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -6px 20px rgba(0,0,0,.08);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  padding: 10px 12px 12px;
+  margin-top: 0;
+  display: none;        /* 필요 시 JS로 보이게 */
+  z-index: 5;
+}
+
     .chat-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; gap:8px; }
     .chat-title{ font-weight:800; font-size:14px; }
     .mode-tabs{ display:flex; gap:6px; }
@@ -139,6 +176,7 @@
     /* ===== 상태 ===== */
     let itineraries=[]; let selectedIndex=null; let currentBudget=300000;
     let chatMode="edit";
+    let ctxForSave = { location:"", start:"", end:"" };
 
     /* ===== 렌더 ===== */
     function renderCards(){
@@ -167,6 +205,7 @@
         const start=ctx.dates?.[0] || "2025-08-13";
         const endDate=new Date(new Date(start).getTime()+(days-1)*86400000).toISOString().slice(0,10);
         $("#subtitle").innerText=`${location} · ${start} ~ ${endDate} · 예산 ${currentBudget.toLocaleString()}원 · 스타일 ${style}`;
+        ctxForSave = { location, start, end: endDate };
 
         try{
           const res=await fetch(API_PLAN,{
@@ -216,6 +255,61 @@
       if (selectedIndex != null) $("#chat-title").textContent = `💬 ${itineraries[selectedIndex].title} 대화`;
       else $("#chat-title").textContent = "💬 일정 대화";
     }
+
+            function saveSchedule(fullText){
+          const id = 'plan_' + Date.now();
+          const title = ctxForSave.location || '여행';
+          const start = ctxForSave.start || '';
+          const end   = ctxForSave.end   || '';
+
+          // 1) 호환 키 1: savedItineraries (+ 상세)
+          const list = JSON.parse(localStorage.getItem('savedItineraries') || '[]');
+          const displayTitle = end
+            ? `${title} (${start.replace(/-/g,'.')} ~ ${end.replace(/-/g,'.')})`
+            : `${title} (${start.replace(/-/g,'.')})`;
+          list.unshift({ id, displayTitle, createdAt: new Date().toISOString() });
+          localStorage.setItem('savedItineraries', JSON.stringify(list));
+          localStorage.setItem('itinerary:' + id, JSON.stringify({ title, text: fullText }));
+
+          // 2) 호환 키 2: justgo_schedules
+          const alt = JSON.parse(localStorage.getItem('justgo_schedules') || '[]');
+          alt.unshift({ id, title, start, end });
+          localStorage.setItem('justgo_schedules', JSON.stringify(alt));
+
+          return id;
+        }
+
+            document.getElementById("btn-confirm").addEventListener("click", () => {
+          const idx = (selectedIndex != null) ? selectedIndex : 0;
+          if (!itineraries[idx]) {
+            alert("확정할 일정이 없어요. 먼저 카드를 눌러 일정을 확인해주세요.");
+            return;
+          }
+          const full = itineraries[idx].fullText || "";
+          localStorage.setItem("finalSchedule", full);
+          window.location.href = "justgofinal.html";
+        });
+
+        document.addEventListener('DOMContentLoaded', ()=>{
+      const btn = document.getElementById('btn-confirm');
+      if(!btn) return;
+      btn.addEventListener('click', ()=>{
+        const idx = (selectedIndex != null) ? selectedIndex : 0;
+        if (!itineraries[idx]) {
+          alert("확정할 일정이 없어요. 먼저 카드를 눌러 일정을 선택해주세요.");
+          return;
+        }
+        const full = itineraries[idx].fullText || "";
+
+        // ✅ 로컬 저장(인덱스 목록용)
+        const sid = saveSchedule(full);
+
+        // ✅ 최종 화면(PDF 버튼 있는 페이지)으로 이동
+        localStorage.setItem('finalSchedule', full);
+        location.href = `justgofinal.html?sid=${encodeURIComponent(sid)}`;
+      });
+    });
+
 
 
     $("#chat-send").addEventListener("click", sendMessage);
@@ -279,6 +373,109 @@
     }
 
     document.addEventListener("DOMContentLoaded", boot);
+
+
+/* savedItineraries / justgo_schedules 둘 다 읽기 + 없으면 마이그레이션 */
+(function(){
+  const LIST_KEY = "savedItineraries";      // [{id, displayTitle, createdAt}]
+  const ALT_KEY  = "justgo_schedules";      // [{id, title, start, end}]
+  const DETAIL_PREFIX = "itinerary:";
+
+  document.addEventListener("DOMContentLoaded", () => {
+    migrateIfNeeded();  // ← 한 번 병합
+    render();
+  });
+
+  function migrateIfNeeded(){
+    const a = JSON.parse(localStorage.getItem(LIST_KEY) || "[]");
+    const b = JSON.parse(localStorage.getItem(ALT_KEY)  || "[]");
+    if (a.length || !b.length) return; // savedItineraries가 있거나, alt가 비었으면 패스
+
+    // alt → savedItineraries 로 변환 저장
+    const merged = b.map(x => {
+      const title = x.title || "여행";
+      const displayTitle = x.end
+        ? `${title} (${fmt(x.start)} ~ ${fmt(x.end)})`
+        : `${title} (${fmt(x.start)})`;
+      return { id: x.id, displayTitle, createdAt: new Date().toISOString() };
+    });
+    localStorage.setItem(LIST_KEY, JSON.stringify(merged));
+  }
+
+  function render(){
+    const root = document.getElementById("schedule-root");
+    const data = loadUnified();    // 둘 중 있는 걸 통합해서 반환
+    root.innerHTML = "";
+
+    if (!data.length) {
+      root.innerHTML = `<div class="empty"><div class="empty-emoji">📭</div>
+        <p class="empty-title">저장된 일정이 없습니다.</p>
+        <p class="empty-sub">상단의 “내 일정 만들기”로 새 일정을 생성하세요.</p></div>`;
+      return;
+    }
+
+    const ul = document.createElement("ul"); ul.className = "schedule-list";
+    data.forEach(item=>{
+      const li = document.createElement("li"); li.className = "schedule-item";
+      const title = document.createElement("div"); title.className="item-title";
+      title.textContent = item.end ? `${item.title} (${fmt(item.start)} ~ ${fmt(item.end)})`
+                                   : `${item.title} (${fmt(item.start)})`;
+      const btns = document.createElement("div"); btns.className="schedule-buttons";
+      const view = document.createElement("button"); view.className="btn btn-view"; view.textContent="보기";
+      const del  = document.createElement("button"); del.className="btn btn-delete"; del.textContent="삭제";
+
+      view.addEventListener("click", ()=> {
+        location.href = `justgochat.html?itinerary=${encodeURIComponent(item.id)}`;
+      });
+      del.addEventListener("click", ()=> {
+        if (!confirm("이 일정을 삭제할까요?")) return;
+        removeUnified(item.id); render();
+      });
+
+      btns.append(view, del);
+      li.append(title, btns);
+      ul.appendChild(li);
+    });
+
+    root.appendChild(ul);
+  }
+
+  function loadUnified(){
+    const a = JSON.parse(localStorage.getItem(LIST_KEY) || "[]");
+    if (Array.isArray(a) && a.length){
+      return a.map(x=>{
+        const rgx = /\((\d{4}\.\d{2}\.\d{2})(?:\s*~\s*(\d{4}\.\d{2}\.\d{2}))?\)/;
+        const m = rgx.exec(x.displayTitle||"");
+        const title = (x.displayTitle||"여행").replace(/\s*\(.+\)\s*$/,"");
+        return {
+          id: x.id,
+          title,
+          start: m?.[1]?.replace(/\./g,"-") || null,
+          end:   m?.[2]?.replace(/\./g,"-") || null
+        };
+      });
+    }
+    const b = JSON.parse(localStorage.getItem(ALT_KEY) || "[]");
+    if (Array.isArray(b) && b.length) return b;
+    return [];
+  }
+
+  function removeUnified(id){
+    const a = JSON.parse(localStorage.getItem(LIST_KEY) || "[]").filter(x=>x.id!==id);
+    localStorage.setItem(LIST_KEY, JSON.stringify(a));
+    const b = JSON.parse(localStorage.getItem(ALT_KEY) || "[]").filter(x=>x.id!==id);
+    localStorage.setItem(ALT_KEY, JSON.stringify(b));
+    localStorage.removeItem(DETAIL_PREFIX + id);
+  }
+
+  function fmt(d){
+    if(!d) return "";
+    if(/^\d{4}-\d{2}-\d{2}$/.test(d)) return d.replace(/-/g,".");
+    const t = new Date(d); if(isNaN(t)) return d;
+    const y=t.getFullYear(), m=String(t.getMonth()+1).padStart(2,"0"), dd=String(t.getDate()).padStart(2,"0");
+    return `${y}.${m}.${dd}`;
+  }
+})();
   </script>
 </body>
 </html>

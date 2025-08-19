@@ -1,26 +1,27 @@
+/* ========== Chat bubbles ========== */
 .chat-bubble-user {
-    background-color: #0059ff;
-    color: white;
-    padding: 10px 14px;
-    border-radius: 16px;
-    border-top-right-radius: 0;
-    max-width: 70%;
-    margin-left: auto;
-    margin-bottom: 8px;
+  background-color: #0059ff;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border-top-right-radius: 0;
+  max-width: 70%;
+  margin-left: auto;
+  margin-bottom: 8px;
 }
 
 .chat-bubble-assistant {
-    background-color: #eeeeee;
-    color: black;
-    padding: 10px 14px;
-    border-radius: 16px;
-    border-top-left-radius: 0;
-    max-width: 70%;
-    margin-right: auto;
-    margin-bottom: 8px;
+  background-color: #eeeeee;
+  color: black;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border-top-left-radius: 0;
+  max-width: 70%;
+  margin-right: auto;
+  margin-bottom: 8px;
 }
 
-<style>
+/* ========== Itinerary option cards ========== */
 .itinerary-option {
   border: 1px solid #ddd;
   padding: 12px;
@@ -37,4 +38,48 @@
   padding-left: 12px;
   color: #333;
 }
-</style>
+
+/* ========== 줄바꿈 규칙: '일정 편집', '일정 확정'이 단어 사이(공백)에서만 줄바꿈 ========== */
+/* 권장: 더 구체적인 셀렉터로 전역 설정을 이김 */
+.chat .chat-header .mode-tabs button {
+  /* 화면이 좁아지면 공백에서만 줄바꿈, 한글 글자 중간(편/집)은 금지 */
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  line-break: strict; /* CJK 줄바꿈 규칙 보수적으로 */
+}
+
+/* (옵션) 버튼 안을 <span class="kword">일정</span> <span class="kword">편집</span>처럼 썼다면
+   각 단어 자체는 한 줄로 유지되고, 단어 사이 공백에서만 줄바꿈됨 */
+.chat .chat-header .mode-tabs button .kword {
+  white-space: nowrap;
+}
+/* 줄바꿈이 확실히 적용되도록 */
+.chat .chat-header .mode-tabs button {
+  white-space: normal;      /* 줄바꿈 허용 */
+  word-break: keep-all;     /* 한글 중간 분리 금지 */
+  line-height: 1.15;        /* 두 줄 간격 살짝 조절 */
+  text-align: center;       /* 가운데 정렬 */
+}
+
+/* 각 단어는 한 줄로 유지 */
+.chat .chat-header .mode-tabs button .kword {
+  white-space: nowrap;
+}
+/* 두 줄 강제 + 가운데 정렬 */
+.mode-tabs { display: flex; gap: 8px; }
+.mode-tabs .two-line{
+  display: inline-flex;
+  flex-direction: column;       /* ➜ 항상 줄바꿈 */
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  line-height: 1.15;
+  padding: 8px 10px;
+  border-radius: 10px;
+  min-width: 72px;              /* 너무 좁아 글자가 세로로 찢어지는 것 방지 */
+}
+.mode-tabs .two-line span{ display:block; }

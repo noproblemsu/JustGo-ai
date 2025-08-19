@@ -6,143 +6,169 @@
   <title>JUSTGO - 내 일정</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Istok Web', sans-serif;
-      background-color: #ffffff;
-    }
+   html, body {
+    min-height: 100vh; 
+    width: 100vw;
+    margin: 0; 
+    padding: 0;
+    display: flex;
+    justify-content: center;   /* 가로 가운데 */
+    align-items: flex-start;   /* 세로 상단 */
+    background: #f0f0f0;       /* 카드 밖 회색 */
+  }
 
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
+  /* 바깥 회색이 보이도록 body는 투명 */
+  body {
+    font-family: 'Istok Web', sans-serif;
+    background: transparent;
+  }
 
-    .page-container {
-  width: 100%;
-  max-width: 393px;
-  height: 100vh;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-}
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
 
+  .page-container {
+    position: relative;
+    width: 393px;
+    height: 787px;          /* ← 고정 높이 */
+    margin: 0 auto;
+    background: #ffffff;    /* 카드 배경 */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
-    /* Header Section */
-    #home-header {
-      background-color: #ffffff;
-      padding: 33px 16px 26px;
-    }
+  /* Header Section */
+  #home-header {
+    background-color: #ffffff;
+    padding: 33px 16px 26px;
+  }
 
-    .header-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 19px;
-    }
+  .header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 19px;
+  }
 
-    .logo {
-      margin: 0;
-      color: #0059ff;
-      font-family: 'Istok Web', sans-serif;
-      font-weight: 700;
-      font-size: 32px;
-      line-height: 48px;
-      letter-spacing: -0.32px;
-      align-self: flex-start;
-    }
+  .logo {
+    margin: 0;
+    color: #0059ff;
+    font-family: 'Istok Web', sans-serif;
+    font-weight: 700;
+    font-size: 32px;
+    line-height: 48px;
+    letter-spacing: -0.32px;
+    align-self: flex-start;
+  }
 
-    .cta-button {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-      max-width: 361px;
-      height: 55px;
-      background-color: #0059ff;
-      border-radius: 8px;
-      color: #ffffff;
-      font-family: 'Istok Web', sans-serif;
-      font-weight: 700;
-      font-size: 18px;
-      line-height: 25.9px;
-      text-align: center;
-      text-decoration: none;
-    }
+  .cta-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    max-width: 361px;
+    height: 55px;
+    background-color: #0059ff;
+    border-radius: 8px;
+    color: #ffffff;
+    font-family: 'Istok Web', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 25.9px;
+    text-align: center;
+    text-decoration: none;
+  }
 
-    /* Schedule Panel */
-    #schedule-panel {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-    }
+  /* Schedule Panel */
+  #schedule-panel {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
 
-    .schedule-container {
-  background-color: #d9d9d9;
-  border-radius: 10px 10px 0px 0px;
-  width: 100%;
-  flex-grow: 1; /* 📌 핵심! 남은 공간을 모두 차지 */
-  overflow-y: auto;
-  padding: 16px;
-}
+  .schedule-container {
+    background-color: #d9d9d9;
+    border-radius: 10px 10px 0px 0px;
+    width: 100%;
+    flex-grow: 1;           /* 📌 남은 공간 채우기 */
+    overflow-y: auto;
+    padding: 16px;
+  }
 
+  .schedule-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 16px;
+    color: #000000;
+  }
 
+  .schedule-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
 
-    .schedule-title {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 16px;
-      color: #000000;
-    }
+  .schedule-item {
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 16px;
+    color: #333333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.1);
+    gap: 12px;
+  }
+  .schedule-item .title {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-    .schedule-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
+  .schedule-buttons {
+    display: flex;
+    gap: 8px;
+    min-width: 100px;
+    flex-shrink: 0;
+  }
 
-    .schedule-item {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin-bottom: 10px;
-      font-size: 16px;
-      color: #333333;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.1);
-    }
+  .btn {
+    padding: 6px 0;
+    width: 48px;
+    height: 32px;
+    font-size: 14px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    flex-shrink: 0;
+  }
 
-    .schedule-buttons {
-      display: flex;
-      gap: 8px;
-      min-width: 100px;
-    }
+  .btn-view {
+    background-color: #0059ff;
+    color: white;
+  }
+  .btn-delete {
+    background-color: #ff4d4d;
+    color: white;
+  }
 
-    .btn {
-      padding: 6px 0;
-      width: 48px;
-      height: 32px;
-      font-size: 14px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      text-align: center;
-    }
-    
-    .btn {
-  flex-shrink: 0;
-}
-
-    .btn-view {
-      background-color: #0059ff;
-      color: white;
-    }
-
-    .btn-delete {
-      background-color: #ff4d4d;
-      color: white;
-    }
+  .empty {
+    color:#666; 
+    background:#fff;
+    border-radius:8px;
+    padding:12px 16px;
+    text-align:center;
+    box-shadow:0 1px 4px rgba(0,0,0,.06);
+  }
+  
   </style>
 </head>
 <body>
@@ -159,46 +185,104 @@
     <section id="schedule-panel">
       <div class="schedule-container">
         <h2 class="schedule-title">📅 내 일정 보기</h2>
-        <ul class="schedule-list">
-          <li class="schedule-item">
-            제주도 여행 (2025.08.10 ~ 08.12)
-            <div class="schedule-buttons">
-              <button class="btn btn-view">보기</button>
-              <button class="btn btn-delete">삭제</button>
-            </div>
-          </li>
-          <li class="schedule-item">
-            부산 가족여행 (2025.08.15 ~ 08.17)
-            <div class="schedule-buttons">
-              <button class="btn btn-view">보기</button>
-              <button class="btn btn-delete">삭제</button>
-            </div>
-          </li>
-          <li class="schedule-item">
-            서울 데이트 코스 (2025.09.01)
-            <div class="schedule-buttons">
-              <button class="btn btn-view">보기</button>
-              <button class="btn btn-delete">삭제</button>
-            </div>
-          </li>
-          <!-- 추가 일정이 많아지면 자동 스크롤 -->
-        </ul>
+        <!-- ✅ 동적 목록 위치 -->
+        <div id="schedule-root"></div>
+
       </div>
     </section>
   </div>
+
+  <!-- ✅ 저장된 일정 렌더링 스크립트 -->
+  <script>
+  (function(){
+  const LIST_KEY = "savedItineraries";   // [{id, displayTitle, createdAt}]
+  const ALT_KEY = "justgo_schedules";    // [{id, title, start, end}]
+  const DETAIL_PREFIX = "itinerary:";
+
+  document.addEventListener("DOMContentLoaded", render);
+
+  function render(){
+    const root = document.getElementById("schedule-root");
+    const data = loadUnified();
+    root.innerHTML = "";
+
+    if (!data.length) {
+      root.innerHTML = `<div class="empty"><div class="empty-emoji">📭</div>
+        <p class="empty-title">저장된 일정이 없습니다.</p>
+        <p class="empty-sub">상단의 “내 일정 만들기”로 새 일정을 생성하세요.</p></div>`;
+      return;
+    }
+
+    const ul = el("ul",{class:"schedule-list"});
+    data.forEach(item=>{
+      const li = el("li",{class:"schedule-item"});
+      const title = el("div",{class:"item-title"},
+        item.end ? `${item.title} (${fmt(item.start)} ~ ${fmt(item.end)})`
+                 : `${item.title} (${fmt(item.start)})`
+      );
+      const btns = el("div",{class:"schedule-buttons"});
+      const view = el("button",{class:"btn btn-view"},"보기");
+      const del  = el("button",{class:"btn btn-delete"},"삭제");
+
+      view.addEventListener("click", ()=> {
+        location.href = `justgochat.html?itinerary=${encodeURIComponent(item.id)}`;
+      });
+      del.addEventListener("click", ()=> {
+        if(!confirm("이 일정을 삭제할까요?")) return;
+        removeUnified(item.id); render();
+      });
+
+      btns.append(view, del);
+      li.append(title, btns);
+      ul.appendChild(li);
+    });
+
+    root.appendChild(ul);
+  }
+
+  // ---- 통합 로딩/삭제 ----
+  function loadUnified(){
+    const saved = JSON.parse(localStorage.getItem(LIST_KEY) || "[]");
+    if (Array.isArray(saved) && saved.length){
+      return saved.map(x=>{
+        const rgx = /\((\d{4}\.\d{2}\.\d{2})(?:\s*~\s*(\d{4}\.\d{2}\.\d{2}))?\)/;
+        const m = rgx.exec(x.displayTitle||"");
+        const title = (x.displayTitle||"여행").replace(/\s*\(.+\)\s*$/,"");
+        return {
+          id: x.id,
+          title,
+          start: m?.[1]?.replace(/\./g,"-") || null,
+          end:   m?.[2]?.replace(/\./g,"-") || null
+        };
+      });
+    }
+    const alt = JSON.parse(localStorage.getItem(ALT_KEY) || "[]");
+    if (Array.isArray(alt) && alt.length) return alt;
+    return [];
+  }
+
+  function removeUnified(id){
+    const a = JSON.parse(localStorage.getItem(LIST_KEY) || "[]").filter(x=>x.id!==id);
+    localStorage.setItem(LIST_KEY, JSON.stringify(a));
+    const b = JSON.parse(localStorage.getItem(ALT_KEY) || "[]").filter(x=>x.id!==id);
+    localStorage.setItem(ALT_KEY, JSON.stringify(b));
+    localStorage.removeItem(DETAIL_PREFIX + id);
+  }
+
+  function fmt(d){
+    if(!d) return "";
+    const t = new Date(d); if(isNaN(t)) return d;
+    const y=t.getFullYear(), m=String(t.getMonth()+1).padStart(2,"0"), day=String(t.getDate()).padStart(2,"0");
+    return `${y}.${m}.${day}`;
+  }
+
+  function el(tag, attrs={}, text){
+    const n = document.createElement(tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text!=null) n.textContent = text;
+    return n;
+  }
+})();
+  </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
