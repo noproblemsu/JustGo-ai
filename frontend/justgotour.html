@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>관광지 추천</title>
   <style>
-     /* 화면 중앙에 393×787 카드 배치 */
 html, body {
   min-height: 100vh;           /* height → min-height 권장 */
   width: 100vw;
@@ -15,13 +14,15 @@ html, body {
   align-items: flex-start;       /* ✅ 세로는 맨 위로 */
   background: #f0f0f0;
 }
- /* ✅ 헤더(206px) 아래에서 시작해서, 푸터를 피해 멈추게 */
-.page{
-  position: absolute;
-  top: 206px;          /* 헤더 높이 */
-  bottom: 120px;       /* 푸터+여유 높이(필요시 110~140px 사이로 미세조정) */
-  left: 0; right: 0;
-  padding: 0 16px;
+   .page-container{
+  position:absolute;
+  top:66px;          /* 헤더 높이 */
+  bottom:112px;      /* 푸터 공간 */
+  left:0; right:0;
+  overflow:hidden;   /* 👈 전체 스크롤 끄기 */
+  display:flex; 
+  flex-direction:column;
+  /* padding은 기존 유지하면 됨 (없어도 OK) */
 }
 
 
