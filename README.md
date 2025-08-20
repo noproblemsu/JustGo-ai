@@ -331,7 +331,7 @@
 * **Frontend**: HTML, CSS, JavaScript, **Flatpickr(MIT)**, **Istok Web(OFL)**
 * **Backend**: **FastAPI(MIT)**, **Pydantic(MIT)**, **Starlette(BSD-3)**, **Uvicorn(BSD-3)**, **httpx(BSD-3)**, **python-dotenv(BSD-2)**, **tenacity(Apache-2.0)**
 * **AI**: **OpenAI Python SDK v1 (MIT)**
-* **External**: **Naver Search/Map API**
+* **External**: **Naver Search API**
 * **PDF**: **html2canvas**, **jsPDF** 
 ---
 
