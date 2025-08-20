@@ -225,7 +225,7 @@ UI는 변경된 구간만 부분 리렌더링
 
 ## 7) 일정 확정 & 저장 — 홈화면/파일 출력
 <p align="center">
-  <img src="docs/images/8.png" width="20%" alt="화면 예시">
+  <img src="docs/images/8.png" width="50%" alt="화면 예시">
 </p>
 
 * **사용자 행동**
