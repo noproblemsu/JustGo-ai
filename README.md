@@ -50,6 +50,7 @@
 <p align="center">
   <img src="docs/images/1.png" width="20%" alt="화면 예시">
 </p>
+
 * **사용자 행동**
 
    * 최근에 일정확인으로 저장한 일정들이 카드 형태로 표시됨
