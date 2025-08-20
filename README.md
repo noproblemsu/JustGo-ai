@@ -74,9 +74,12 @@
    * GET /api/itinerary/list : 사용자별 저장 일정 목록 반환 (id, title, dates, totalCost, updatedAt 등)
    * 페이지네이션/정렬(최근 업데이트순) 지원
 
+ > 사용 오픈소스: **FastAPI**, **Pydantic**, **httpx**, **Istok Web**, **fetch**, **localStorage** 
+
+
 ---
 
-> 사용 오픈소스: **FastAPI**, **Pydantic**, **httpx**, **Istok Web**, **fetch**, **localStorage** 
+
 
 ### 2) 입력 단계 — 여행지·날짜·예산·동반자·스타일 수집
 <p align="center">
