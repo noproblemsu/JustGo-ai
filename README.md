@@ -9,12 +9,12 @@
 ![OpenAI API](https://img.shields.io/badge/API-OpenAI%20GPT-blue)
 ![Naver API](https://img.shields.io/badge/API-Naver%20Place%20Review-green)
 
-![화면 예시](docs/images/배경.jpg)
+
 
 > **입력 → 추천 → 선택 → 일정 생성 → 챗봇 수정**
 >
 > 사용자가 입력한 **여행지, 날짜, 예산, 동반자, 스타일**을 바탕으로 관광지/맛집을 추천하고, 사용자가 고른 **가고 싶은 장소**와 입력된 여행지, 날짜, 예산, 동반자, 스타일 정보를 반영해 일정을 생성합니다. 이후 **챗봇과의 대화로 실시간 수정**까지 이어지는 완전한 여정을 제공합니다.
-
+![화면 예시](docs/images/배경.jpg)
 ---
 
 ## ✨ 데모
