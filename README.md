@@ -106,7 +106,9 @@
 * **프론트엔드 구성요소**
    *  정렬/필터 토글, 태그 바(상단에 현재 입력값 노출)
 * **데이터 흐름 & 규칙**
-   *  프론트엔드가 서버에 추천 요청 → 서버가 GPT로 초기 후보 생성 → 네이버 장소/리뷰 API로 평판·지도 링크 보강 후 반환
+   *  프론트엔드가 서버에 추천 요청 → 서버가 GPT로 초기 후보 생성 →  **네이버 검색/지도 API**의 공식 응답을 사용
+   *  **평점/리뷰 수**는 API 응답에 제공되는 범위 내에서만 사용합니다(제공되지 않는 경우 생략).
+   * **리뷰 요약/설명 문구**는 GPT가 공개 정보(메뉴/특징 등)를 기반으로 **요약/생성**.
    *  사용자 선택 여부는 서버 DB에 기록 (SSOT 보장)
 * **백엔드 로직**
    *  입력값을 바탕으로 GPT에 "이 도시/예산/스타일" 조건을 전달해 후보기관광지/맛집을 생성하고, 각 후보에 대해 **네이버 장소/리뷰 API**로 실제 평판·리뷰·지도 검색 링크를 보강합니다.
@@ -330,11 +332,11 @@
 
 ## 🧰 기술 스택
 
-* **Frontend**: HTML, CSS, JavaScript, **Flatpickr(MIT)**, **Istok Web(OFL)**, **Figma**
+* **Frontend**: HTML, CSS, JavaScript, **Flatpickr(MIT)**, **Istok Web(OFL)**
 * **Backend**: **FastAPI(MIT)**, **Pydantic(MIT)**, **Starlette(BSD-3)**, **Uvicorn(BSD-3)**, **httpx(BSD-3)**, **python-dotenv(BSD-2)**, **tenacity(Apache-2.0)**
 * **AI**: **OpenAI Python SDK v1 (MIT)**
-* **External**: **Naver Search/Place Review API**
-* **PDF**: ReportLab or WeasyPrint
+* **External**: **Naver Search/Map API**
+* **PDF**: **html2canvas**, **jsPDF** 
 ---
 
 ## 🚀 빠른 시작
@@ -342,17 +344,25 @@
 ```bash
 # 1) Backend
 cd backend
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
-pip install -r requirements.txt
-cp .env.example .env  # OPENAI, NAVER 키 입력
-uvicorn main:app --reload --port 8000
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements_places.txt
+
+# 환경변수 설정 (.env 생성 후 OpenAI, Naver 키 입력)
+cp .env.example .env  # 없으면 직접 .env 작성
+# .env 내용:
+# OPENAI_API_KEY=sk-...
+# NAVER_CLIENT_ID=...
+# NAVER_CLIENT_SECRET=...
+
+# FastAPI 실행
+uvicorn backend.main:app --reload --port 8000
+# → http://127.0.0.1:8000/docs 에서 API 확인 가능
 
 # 2) Frontend
-# 정적 파일을 브라우저로 직접 열거나(개발용), 간단 서버 사용
-# Python
-python -m http.server 5173 -d frontend
-# 또는 Node
-npx serve frontend -l 5173
+# VS Code 확장 프로그램 "Live Server" 사용 권장
+# index.html을 열고 "Go Live" 버튼 클릭
+# 기본 접속 주소 예시:
+# http://127.0.0.1:5500/frontend/index.html
 ```
 
 ---
