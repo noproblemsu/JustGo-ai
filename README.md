@@ -287,7 +287,7 @@
   *  일정확인 시 **Toast/Alert**로 “일정이 저장되었습니다” 안내 후 홈으로 라우팅합니다.
   *  PDF 버튼 클릭 시 브라우저 **다운로드 다이얼로그**가 열리며 저장됩니다.
 
-> 사용 오픈소스: **FastAPI**, **Pydantic**, **ReportLab**, **WeasyPrint**, **localStorage**
+> 사용 오픈소스: **FastAPI**, **Pydantic**, **html2canvas**, **jsPDF**, **localStorage**
 
 
 ---
