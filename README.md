@@ -9,7 +9,7 @@
 ![OpenAI API](https://img.shields.io/badge/API-OpenAI%20GPT-blue)
 ![Naver API](https://img.shields.io/badge/API-Naver%20Place%20Review-green)
 
-![화면 예시](docs/images/배경.png)
+![화면 예시](docs/images/배경.jpg)
 
 > **입력 → 추천 → 선택 → 일정 생성 → 챗봇 수정**
 >
