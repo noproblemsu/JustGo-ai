@@ -49,7 +49,7 @@
 
 ### 0) 홈화면 — 저장된 일정 확인 및 새 일정 시작
 <p align="center">
-  <img src="docs/images/제목을-입력해주세요_-001.png" width="70%" alt="홈화면 예시">
+  <img src="docs/images/1.png" width="70%" alt="홈화면 예시">
 </p>
 
 * **사용자 행동**
