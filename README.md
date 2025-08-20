@@ -194,6 +194,8 @@
 * **백엔드 로직**
   * `여행지, 날짜, 예산, 동반자, 스타일, 선택 관광지[], 선택 맛집[]`을 종합해 현실적인 동선/소요시간/식사타임을 고려한 일정을 GPT로 생성합니다.
   * 하루 단위 비용을 합산하여 **일정 총액**을 계산(예산 준수). 응답에는 **총액만** 명시하도록 통제합니다.
+  * 단순히 장소를 나열하는 것이 아니라, **동선 최적화**를 반영하여 실제 실행 가능한 일정만 제공합니다.
+
 * **데이터 흐름 & 규칙**
   * 서버에 생성 요청 → GPT가 예산 ±15% 준수, 동선/식사/소요시간 고려 일정 생성
   * 총액은 일정 단위로만 표기(아이템 단가 노출 안 함)
@@ -232,7 +234,7 @@
   * 모든 수정은 서버 DB를 기준으로 반영되므로, **lcalStorage와 불일치 없음**
 
   *  예) "둘째 날 저녁을 바다 전망 식당으로 바꿔줘",
-  *  예) "비 오면 실내 활동으로 플랜 B 추가"
+  *  예) "2일차 저녁을 20시로 변경" (**구체적인 날짜·시간 지정**도 가능)
 * **데이터 흐름 & 규칙**
   * 현재 itinerary state와 사용자 메시지를 함께 서버로 전송
   * 서버는 GPT로부터 변경 diff를 받아 서버 측에서 병합 → 검증 후 변경된 일정 반환
@@ -328,7 +330,7 @@
 
 ## 🧰 기술 스택
 
-* **Frontend**: HTML, CSS, JavaScript, **Flatpickr(MIT)**, **Istok Web(OFL)**
+* **Frontend**: HTML, CSS, JavaScript, **Flatpickr(MIT)**, **Istok Web(OFL)**, **Figma**
 * **Backend**: **FastAPI(MIT)**, **Pydantic(MIT)**, **Starlette(BSD-3)**, **Uvicorn(BSD-3)**, **httpx(BSD-3)**, **python-dotenv(BSD-2)**, **tenacity(Apache-2.0)**
 * **AI**: **OpenAI Python SDK v1 (MIT)**
 * **External**: **Naver Search/Place Review API**
